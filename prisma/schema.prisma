@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  recipient   String
+  description String?
+  createdAt   DateTime @default(now())
+  userId          String?
+  user            User?    @relation("CreatedEvents", fields: [userId], references: [id], onDelete: Cascade)
+
+  recipientUserId String?
+  recipientUser   User?    @relation("ReceivedEvents", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  claimToken      String?  @unique
+  recipientEmail  String?
+
+  messages VideoMessage[]
+}
+
+model User {
+  id       String  @id @default(uuid())
+  email          String  @unique
+  password       String
+  name           String?
+  events         Event[] @relation("CreatedEvents")
+  receivedEvents Event[] @relation("ReceivedEvents")
+}
+
+model VideoMessage {
+  id         String   @id @default(uuid())
+  eventId    String
+  videoUrl   String
+  senderName String
+  createdAt  DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
