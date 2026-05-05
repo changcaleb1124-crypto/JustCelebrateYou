@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Video, Square, Loader2 } from 'lucide-react';
+import { storageClient } from '@/lib/storage-client';
 
 interface VideoRecorderProps {
     eventId: string;
@@ -105,25 +106,48 @@ export default function VideoRecorder({ eventId, onSuccess, onCancel }: VideoRec
             return;
         }
 
+        // File Validation (50MB limit)
+        const MAX_SIZE = 50 * 1024 * 1024;
+        if (recordedBlob.size > MAX_SIZE) {
+            alert("Video is too large. Please keep it under 50MB (about 60 seconds).");
+            return;
+        }
+
         setIsUploading(true);
-        const formData = new FormData();
-        formData.append('video', recordedBlob, 'video.webm');
-        formData.append('eventId', eventId);
-        formData.append('senderName', senderName);
 
         try {
+            // 1. Upload directly to storage provider (Vercel Blob)
+            const uploadResult = await storageClient.uploadVideo({
+                file: recordedBlob,
+                fileName: `video-${Date.now()}.webm`, // It's webm from MediaRecorder
+                eventId: eventId,
+                // optional: onProgress could be added here if we want a progress bar
+            });
+
+            // 2. Save metadata to our database
             const res = await fetch('/api/messages', {
                 method: 'POST',
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    eventId,
+                    videoUrl: uploadResult.url,
+                    senderName,
+                    fileName: uploadResult.fileName,
+                    fileSize: uploadResult.fileSize,
+                    mimeType: uploadResult.mimeType,
+                }),
             });
+
             if (res.ok) {
                 onSuccess();
             } else {
                 const errorData = await res.json();
-                alert(errorData.error || "Upload failed");
+                alert(errorData.error || "Failed to save message metadata.");
             }
         } catch (e) {
-            console.error(e);
+            console.error("Upload process failed:", e);
             alert("An error occurred while uploading. Please try again.");
         } finally {
             setIsUploading(false);

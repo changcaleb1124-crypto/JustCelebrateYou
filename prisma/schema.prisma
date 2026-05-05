@@ -41,7 +41,11 @@ model VideoMessage {
   eventId    String
   videoUrl   String
   senderName String
-  createdAt  DateTime @default(now())
+  createdAt       DateTime @default(now())
+  fileName        String?
+  fileSize        Int?
+  mimeType        String?
+  storageProvider String?
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
