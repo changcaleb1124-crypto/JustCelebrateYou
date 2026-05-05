@@ -1,34 +1,40 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Video, Square, Loader2, Upload } from 'lucide-react';
+import { Video, Square, Loader2 } from 'lucide-react';
 import { storageClient } from '@/lib/storage-client';
 
 interface VideoRecorderProps {
     eventId: string;
+    initialFile?: File | null;
     onSuccess: () => void;
     onCancel: () => void;
 }
 
-type Mode = 'record' | 'upload' | null;
-
-export default function VideoRecorder({ eventId, onSuccess, onCancel }: VideoRecorderProps) {
+export default function VideoRecorder({ eventId, initialFile, onSuccess, onCancel }: VideoRecorderProps) {
     const [isRecording, setIsRecording] = useState(false);
-    const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
+    const [recordedBlob, setRecordedBlob] = useState<Blob | null>(initialFile || null);
     const [senderName, setSenderName] = useState('');
     const [isUploading, setIsUploading] = useState(false);
     const [timeLeft, setTimeLeft] = useState(60);
-    const [activeMode, setActiveMode] = useState<Mode>(null);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const chunksRef = useRef<BlobPart[]>([]);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Set video src for initial file if provided
+    useEffect(() => {
+        if (initialFile && videoRef.current) {
+            videoRef.current.srcObject = null;
+            videoRef.current.src = URL.createObjectURL(initialFile);
+            videoRef.current.controls = true;
+        }
+    }, [initialFile]);
 
     useEffect(() => {
-        if (activeMode === 'record') {
+        if (!initialFile) {
             navigator.mediaDevices.getUserMedia({ video: true, audio: true })
                 .then(stream => {
                     streamRef.current = stream;
@@ -39,7 +45,7 @@ export default function VideoRecorder({ eventId, onSuccess, onCancel }: VideoRec
                 .catch(err => {
                     console.error("Error accessing media devices.", err);
                     alert("Camera and microphone access is required to record a message.");
-                    setActiveMode(null);
+                    onCancel();
                 });
         }
 
@@ -50,7 +56,7 @@ export default function VideoRecorder({ eventId, onSuccess, onCancel }: VideoRec
             }
             if (timerRef.current) clearInterval(timerRef.current);
         };
-    }, [activeMode]);
+    }, [initialFile, onCancel]);
 
     const startRecording = () => {
         if (!streamRef.current) return;
@@ -99,44 +105,17 @@ export default function VideoRecorder({ eventId, onSuccess, onCancel }: VideoRec
     };
 
     const resetRecording = () => {
+        if (initialFile) {
+            // If we're in upload mode and they want to choose a different video, 
+            // we should probably just close this modal and let them click "Upload Video" again
+            onCancel();
+            return;
+        }
         setRecordedBlob(null);
-        if (activeMode === 'record' && streamRef.current && videoRef.current) {
+        if (streamRef.current && videoRef.current) {
             videoRef.current.src = '';
             videoRef.current.srcObject = streamRef.current;
             videoRef.current.controls = false;
-        } else if (activeMode === 'upload' && videoRef.current) {
-            videoRef.current.src = '';
-            videoRef.current.controls = false;
-            setActiveMode(null);
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const MAX_SIZE = 50 * 1024 * 1024; // 50MB
-        if (file.size > MAX_SIZE) {
-            alert("Video is too large. Please keep it under 50MB.");
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            return;
-        }
-
-        const validTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-        if (!validTypes.includes(file.type)) {
-            alert("Invalid file type. Please upload an MP4, WebM, or MOV video.");
-            if (fileInputRef.current) fileInputRef.current.value = '';
-            return;
-        }
-
-        setActiveMode('upload');
-        setRecordedBlob(file);
-        
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-            videoRef.current.src = URL.createObjectURL(file);
-            videoRef.current.controls = true;
         }
     };
 
@@ -198,92 +177,65 @@ export default function VideoRecorder({ eventId, onSuccess, onCancel }: VideoRec
     return (
         <div className="modal-overlay animate-fade-in">
             <div className="modal-content">
-                <h2 className="modal-title">Record Your Message</h2>
+                <h2 className="modal-title">{initialFile ? "Upload Your Message" : "Record Your Message"}</h2>
 
-                {!activeMode && !recordedBlob ? (
-                    <div className="flex flex-col gap-4 py-8">
-                        <button 
-                            onClick={() => setActiveMode('record')}
-                            className="btn btn-primary py-4 text-lg flex items-center justify-center gap-2"
-                        >
-                            <Video className="w-6 h-6" /> Record Video
-                        </button>
-                        <div className="text-center text-sm text-text-muted">or</div>
-                        <button 
-                            onClick={() => fileInputRef.current?.click()}
-                            className="btn btn-outline py-4 text-lg flex items-center justify-center gap-2"
-                        >
-                            <Upload className="w-6 h-6" /> Upload Video
-                        </button>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef}
-                            className="hidden" 
-                            accept="video/mp4,video/webm,video/quicktime"
-                            onChange={handleFileChange}
-                        />
+                <div className="video-preview-container">
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        muted={!recordedBlob}
+                        playsInline
+                    />
+                    {isRecording && (
+                        <div className="recording-indicator">
+                            <span className="pulse-dot" />
+                            00:{timeLeft.toString().padStart(2, '0')}
+                        </div>
+                    )}
+                </div>
+
+                {!recordedBlob ? (
+                    <div className="record-btn-container">
+                        {!isRecording ? (
+                            <button onClick={startRecording} className="record-btn">
+                                <Video />
+                            </button>
+                        ) : (
+                            <button onClick={stopRecording} className="record-btn recording">
+                                <Square />
+                            </button>
+                        )}
                     </div>
                 ) : (
-                    <>
-                        <div className="video-preview-container">
-                            <video
-                                ref={videoRef}
-                                autoPlay
-                                muted={!recordedBlob}
-                                playsInline
-                            />
-                            {isRecording && (
-                                <div className="recording-indicator">
-                                    <span className="pulse-dot" />
-                                    00:{timeLeft.toString().padStart(2, '0')}
-                                </div>
-                            )}
+                    <div className="form-group">
+                        <label className="form-label" htmlFor="senderName">Your Name</label>
+                        <input
+                            id="senderName"
+                            type="text"
+                            className="form-input"
+                            placeholder="e.g. Aunt Sarah"
+                            value={senderName}
+                            onChange={(e) => setSenderName(e.target.value)}
+                            autoFocus
+                        />
+
+                        <div className="flex gap-4 mt-4">
+                            <button
+                                onClick={resetRecording}
+                                className="btn btn-outline flex-1"
+                                disabled={isUploading}
+                            >
+                                {initialFile ? 'Choose Different Video' : 'Retake'}
+                            </button>
+                            <button
+                                onClick={handleUpload}
+                                className="btn btn-primary flex-1"
+                                disabled={isUploading || !senderName.trim()}
+                            >
+                                {isUploading ? <Loader2 className="animate-spin" /> : 'Submit'}
+                            </button>
                         </div>
-
-                        {!recordedBlob && activeMode === 'record' ? (
-                            <div className="record-btn-container">
-                                {!isRecording ? (
-                                    <button onClick={startRecording} className="record-btn">
-                                        <Video />
-                                    </button>
-                                ) : (
-                                    <button onClick={stopRecording} className="record-btn recording">
-                                        <Square />
-                                    </button>
-                                )}
-                            </div>
-                        ) : recordedBlob ? (
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="senderName">Your Name</label>
-                                <input
-                                    id="senderName"
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="e.g. Aunt Sarah"
-                                    value={senderName}
-                                    onChange={(e) => setSenderName(e.target.value)}
-                                    autoFocus
-                                />
-
-                                <div className="flex gap-4 mt-4">
-                                    <button
-                                        onClick={resetRecording}
-                                        className="btn btn-outline flex-1"
-                                        disabled={isUploading}
-                                    >
-                                        {activeMode === 'record' ? 'Retake' : 'Choose Different Video'}
-                                    </button>
-                                    <button
-                                        onClick={handleUpload}
-                                        className="btn btn-primary flex-1"
-                                        disabled={isUploading || !senderName.trim()}
-                                    >
-                                        {isUploading ? <Loader2 className="animate-spin" /> : 'Submit'}
-                                    </button>
-                                </div>
-                            </div>
-                        ) : null}
-                    </>
+                    </div>
                 )}
 
                 {!isRecording && !recordedBlob && (

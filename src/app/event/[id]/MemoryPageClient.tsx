@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Video, Copy, CheckCircle2, Trash2, CalendarHeart } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Video, Copy, CheckCircle2, Trash2, CalendarHeart, Upload } from 'lucide-react';
 import VideoRecorder from '@/components/VideoRecorder';
 
 type Message = {
@@ -24,10 +24,13 @@ type EventData = {
 export default function MemoryPageClient({ event }: { event: EventData }) {
     const [messages, setMessages] = useState<Message[]>(event.messages);
     const [showRecorder, setShowRecorder] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [copied, setCopied] = useState(false);
     const [isOwner, setIsOwner] = useState(false);
     const [generatingLink, setGeneratingLink] = useState(false);
     const [claimLink, setClaimLink] = useState('');
+    
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         // Check if current user created this page
@@ -41,6 +44,29 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
         navigator.clipboard.writeText(window.location.href);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+        if (file.size > MAX_SIZE) {
+            alert("Video is too large. Please keep it under 50MB.");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        const validTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+        if (!validTypes.includes(file.type)) {
+            alert("Invalid file type. Please upload an MP4, WebM, or MOV video.");
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
+
+        setSelectedFile(file);
+        setShowRecorder(true);
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleGenerateClaimLink = async () => {
@@ -108,11 +134,29 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
                 <div className="flex flex-wrap justify-center gap-4 mt-6" style={{ marginTop: '2rem' }}>
                     <button
                         className="btn btn-primary flex items-center gap-2"
-                        onClick={() => setShowRecorder(true)}
+                        onClick={() => {
+                            setSelectedFile(null);
+                            setShowRecorder(true);
+                        }}
                     >
                         <Video size={20} />
                         Record Message
                     </button>
+                    <button
+                        className="btn btn-outline flex items-center gap-2"
+                        style={{ backgroundColor: 'white' }}
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        <Upload size={20} />
+                        Upload Video
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        style={{ display: 'none' }}
+                        accept="video/mp4,video/webm,video/quicktime"
+                        onChange={handleFileChange}
+                    />
                     <button
                         className="btn btn-outline flex items-center gap-2"
                         style={{ backgroundColor: 'white' }}
@@ -203,11 +247,16 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
             {showRecorder && (
                 <VideoRecorder
                     eventId={event.id}
+                    initialFile={selectedFile}
                     onSuccess={() => {
                         setShowRecorder(false);
+                        setSelectedFile(null);
                         refreshMessages();
                     }}
-                    onCancel={() => setShowRecorder(false)}
+                    onCancel={() => {
+                        setShowRecorder(false);
+                        setSelectedFile(null);
+                    }}
                 />
             )}
         </main>
