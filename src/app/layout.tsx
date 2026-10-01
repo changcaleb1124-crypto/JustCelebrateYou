@@ -5,8 +5,8 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-    title: 'JustCelebrateYou — Celebrate Life’s Important Moments',
-    description: 'JustCelebrateYou lets you gather video messages from friends and family to celebrate birthdays, graduations, anniversaries, and meaningful life moments.',
+    title: 'JustCelebrateYou — Gather Video Messages for Life’s Meaningful Moments',
+    description: 'JustCelebrateYou lets you gather video messages from friends and family for birthdays, anniversaries, memorials, and milestones. Save celebrations to your account and revisit them anytime.',
 };
 
 export default function RootLayout({

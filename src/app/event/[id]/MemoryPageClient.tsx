@@ -131,9 +131,10 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
                     </p>
                 )}
 
-                <div className="flex flex-wrap justify-center gap-4 mt-6" style={{ marginTop: '2rem' }}>
+                <div className="flex flex-wrap justify-center gap-3 mt-6" style={{ marginTop: '2rem' }}>
                     <button
                         className="btn btn-primary flex items-center gap-2"
+                        style={{ padding: '12px 24px', fontSize: '1rem' }}
                         onClick={() => {
                             setSelectedFile(null);
                             setShowRecorder(true);
@@ -144,7 +145,7 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
                     </button>
                     <button
                         className="btn btn-outline flex items-center gap-2"
-                        style={{ backgroundColor: 'white' }}
+                        style={{ backgroundColor: 'white', padding: '12px 20px', fontSize: '1rem' }}
                         onClick={() => fileInputRef.current?.click()}
                     >
                         <Upload size={20} />
@@ -159,7 +160,7 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
                     />
                     <button
                         className="btn btn-outline flex items-center gap-2"
-                        style={{ backgroundColor: 'white' }}
+                        style={{ backgroundColor: 'white', padding: '12px 20px', fontSize: '1rem' }}
                         onClick={handleCopyLink}
                     >
                         {copied ? <CheckCircle2 size={20} style={{ color: 'green' }} /> : <Copy size={20} />}
@@ -168,20 +169,20 @@ export default function MemoryPageClient({ event }: { event: EventData }) {
                 </div>
 
                 {isOwner && !event.recipientUserId && (
-                    <div className="card mt-10 animate-fade-in" style={{ marginTop: '3rem', padding: '1.5rem', backgroundColor: '#FFF9ED', border: '1px solid #F4B942', maxWidth: '600px', margin: '3rem auto 0 auto' }}>
+                    <div className="card mt-10 animate-fade-in" style={{ marginTop: '3rem', padding: 'clamp(1rem, 3vw, 1.5rem)', backgroundColor: '#FFF9ED', border: '1px solid #F4B942', maxWidth: '600px', margin: '3rem auto 0 auto' }}>
                         <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: '#B37D1A' }}>Gift this Celebration</h3>
-                        <p style={{ color: '#8A5D07', marginBottom: '1.25rem', fontSize: '0.95rem' }}>
-                            Would you like <strong>{event.recipient}</strong> to keep this celebration in their own account? They can save it forever in their personal library.
+                        <p style={{ color: '#8A5D07', marginBottom: '1.25rem', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                            Would you like <strong>{event.recipient}</strong> to keep this celebration in their own account? They can save it to their account and revisit the messages anytime.
                         </p>
                         <div>
-                            <button className="btn btn-primary" onClick={handleGenerateClaimLink} disabled={generatingLink} style={{ padding: '8px 16px', fontSize: '0.9rem' }}>
+                            <button className="btn btn-primary" onClick={handleGenerateClaimLink} disabled={generatingLink} style={{ padding: '8px 16px', fontSize: '0.9rem', width: 'auto' }}>
                                 {generatingLink ? 'Generating...' : claimLink || event.claimToken ? 'Generate Invite Link Again' : 'Create Invite Link'}
                             </button>
                         </div>
                         {claimLink && (
-                            <div className="mt-4 p-3 rounded flex justify-between items-center" style={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)' }}>
-                                <code style={{ fontSize: '0.85rem', wordBreak: 'break-all', color: '#666' }}>{claimLink}</code>
-                                <button onClick={() => { navigator.clipboard.writeText(claimLink); alert('Copied!'); }} style={{ marginLeft: '1rem', padding: '4px 8px', color: '#B37D1A', fontWeight: 600 }}>Copy</button>
+                            <div className="mt-4 p-3 rounded flex justify-between items-center" style={{ backgroundColor: 'white', border: '1px solid rgba(0,0,0,0.1)', flexWrap: 'wrap', gap: '8px' }}>
+                                <code style={{ fontSize: '0.85rem', wordBreak: 'break-all', color: '#666', flex: 1, minWidth: '180px' }}>{claimLink}</code>
+                                <button onClick={() => { navigator.clipboard.writeText(claimLink); alert('Copied!'); }} style={{ padding: '4px 10px', color: '#B37D1A', fontWeight: 600, border: '1px solid #F4B942', borderRadius: '4px', background: '#FFF9ED' }}>Copy</button>
                             </div>
                         )}
                     </div>
