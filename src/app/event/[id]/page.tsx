@@ -4,8 +4,9 @@ import MemoryPageClient from './MemoryPageClient';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
+import { ArrowLeft } from 'lucide-react';
 
-export default async function MemoryPage(props: { params: Promise<{ id: string }> }) {
+export default async function CelebrationPage(props: { params: Promise<{ id: string }> }) {
     const params = await props.params;
     const { id } = params;
 
@@ -21,23 +22,47 @@ export default async function MemoryPage(props: { params: Promise<{ id: string }
     if (!event) notFound();
 
     const userId = (await cookies()).get('session')?.value;
-    const isLoggedIn = !!userId;
+    let currentUser: { name: string | null; email: string } | null = null;
+
+    if (userId) {
+        const u = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, email: true }
+        });
+        if (u) currentUser = u;
+    }
+
+    const isCreator = Boolean(userId && event.userId && userId === event.userId);
+    const sanitizedEvent = {
+        ...event,
+        claimToken: isCreator ? event.claimToken : null,
+    };
 
     return (
-        <>
-            <Navbar />
-            {isLoggedIn && (
-                <div className="container" style={{ paddingTop: '1.5rem', paddingBottom: '0' }}>
+        <div style={{ minHeight: '100vh', backgroundColor: '#FAF7F2' }}>
+            <Navbar user={currentUser ? { name: currentUser.name, email: currentUser.email } : undefined} />
+            {userId && (
+                <div className="container" style={{ paddingTop: '1.25rem', paddingBottom: '0', maxWidth: '860px' }}>
                     <Link 
                         href="/dashboard" 
-                        className="btn btn-outline" 
-                        style={{ display: 'inline-flex', alignItems: 'center', width: 'auto', gap: '8px', padding: '8px 14px', fontSize: '0.875rem' }}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: '#6B7280',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            textDecoration: 'none'
+                        }}
                     >
-                        &larr; Back to Dashboard
+                        <ArrowLeft size={16} /> Back to Dashboard
                     </Link>
                 </div>
             )}
-            <MemoryPageClient event={event} />
-        </>
+            <MemoryPageClient
+                event={sanitizedEvent}
+                currentUserId={userId || null}
+            />
+        </div>
     );
 }

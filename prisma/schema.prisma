@@ -23,6 +23,8 @@ model Event {
   recipientUser   User?    @relation("ReceivedEvents", fields: [recipientUserId], references: [id], onDelete: Cascade)
   claimToken      String?  @unique
   recipientEmail  String?
+  occasion        String?
+  coverUrl        String?
 
   messages VideoMessage[]
 }

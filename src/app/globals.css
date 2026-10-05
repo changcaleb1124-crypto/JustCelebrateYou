@@ -13,9 +13,18 @@
     --radius-md: 12px;
     --radius-sm: 8px;
 
+    --bg-warm-ivory: #FAF7F2;
+    --text-charcoal: #1F2937;
+    --border-subtle: #EFECE6;
+
     --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
     --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.08);
     --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.12);
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
 }
 
 * {

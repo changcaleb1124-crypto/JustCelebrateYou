@@ -20,11 +20,12 @@ export async function PUT(req: Request) {
         });
 
         return NextResponse.json({ success: true, user: { id: user.id, name: user.name } });
-    } catch (e: any) {
+    } catch (e: unknown) {
         console.error('Profile update error:', e);
         // Pass the actual Prisma/Server error back so the frontend can display it instead of a generic 500
+        const message = (e as Error)?.message;
         return NextResponse.json({ 
-            error: e?.message ? `Server Error: ${e.message}` : 'An unexpected server error occurred.' 
+            error: message ? `Server Error: ${message}` : 'An unexpected server error occurred.' 
         }, { status: 500 });
     }
 }

@@ -49,7 +49,7 @@ export default function ProfileHeader({ user }: { user: { email: string, name: s
             } else {
                 setErrorMsg(data.error || 'Failed to update profile');
             }
-        } catch (e) {
+        } catch {
             setErrorMsg('An error occurred. Please try again.');
         } finally {
             setLoading(false);
@@ -77,7 +77,7 @@ export default function ProfileHeader({ user }: { user: { email: string, name: s
                             <X size={20} />
                         </button>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-color)' }}>Edit Profile</h2>
-                        <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Choose how you'd like to be greeted.</p>
+                        <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Choose how you&apos;d like to be greeted.</p>
                         
                         {errorMsg && <div style={{ color: 'var(--error-color)', marginBottom: '1rem', fontWeight: 500, backgroundColor: 'rgba(220,38,38,0.1)', padding: '0.75rem', borderRadius: '4px' }}>{errorMsg}</div>}
                         {successMsg && <div style={{ color: 'green', marginBottom: '1rem', fontWeight: 500, backgroundColor: 'rgba(0,128,0,0.1)', padding: '0.75rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle2 size={16} /> {successMsg}</div>}

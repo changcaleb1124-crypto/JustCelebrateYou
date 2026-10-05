@@ -3,7 +3,7 @@ import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleClaimLink(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
         const id = (await params).id;
         const userId = (await cookies()).get('session')?.value;
@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
         if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         
         if (event.userId !== userId) {
-            return NextResponse.json({ error: 'Unauthorized to share this event' }, { status: 403 });
+            return NextResponse.json({ error: 'Forbidden: Only the project creator can gift this celebration or generate claim links' }, { status: 403 });
         }
 
         if (event.recipientUserId) {
@@ -31,8 +31,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         return NextResponse.json({ claimToken: token, claimUrl: `${baseUrl}/claim/${token}` });
-    } catch (e) {
+    } catch (e: unknown) {
         console.error('Error generating claim link:', e);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        return NextResponse.json({ error: (e as Error).message || 'Internal server error' }, { status: 500 });
     }
 }
+
+export const GET = handleClaimLink;
+export const POST = handleClaimLink;

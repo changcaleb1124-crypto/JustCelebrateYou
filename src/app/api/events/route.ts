@@ -9,9 +9,18 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { title, recipient, description } = await req.json();
+        const { title, recipient, description, occasion } = await req.json();
         if (!title || !recipient) {
             return NextResponse.json({ error: 'Title and recipient are required' }, { status: 400 });
+        }
+
+        const allowedOccasions = ['birthday', 'graduation', 'anniversary', 'appreciation', 'other'];
+        let sanitizedOccasion: string | null = null;
+        if (occasion && typeof occasion === 'string') {
+            const clean = occasion.toLowerCase().trim();
+            if (allowedOccasions.includes(clean)) {
+                sanitizedOccasion = clean;
+            }
         }
 
         const event = await prisma.event.create({
@@ -19,6 +28,7 @@ export async function POST(req: Request) {
                 title,
                 recipient,
                 description,
+                occasion: sanitizedOccasion,
                 userId,
             },
         });
