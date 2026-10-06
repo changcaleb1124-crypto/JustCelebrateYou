@@ -43,9 +43,12 @@ export default function LandingFooter() {
                 {/* Footer Bar */}
                 <footer className="landing-footer">
                     <div className="footer-inner">
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <CalendarHeart size={22} style={{ color: 'var(--accent-color)' }} />
-                            <span style={{ fontWeight: 700, color: 'var(--text-color)', fontSize: '1.05rem' }}>JustCelebrateYou</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', lineHeight: 1 }}>
+                            <CalendarHeart size={22} color="#FF795C" strokeWidth={2.2} style={{ flexShrink: 0 }} aria-hidden="true" />
+                            <span style={{ fontWeight: 700, letterSpacing: '-0.02em', fontSize: '1.05rem', whiteSpace: 'nowrap' }}>
+                                <span style={{ color: '#1F2937' }}>JustCelebrate</span>
+                                <span style={{ color: '#FF795C' }}>You</span>
+                            </span>
                         </div>
 
                         <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>

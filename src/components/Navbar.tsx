@@ -26,6 +26,8 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
 
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const profileBtnRef = useRef<HTMLButtonElement>(null);
+    const mobileMenuRef = useRef<HTMLDivElement>(null);
+    const mobileBtnRef = useRef<HTMLButtonElement>(null);
 
     // Sync initialUser if updated
     useEffect(() => {
@@ -35,16 +37,29 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
         }
     }, [initialUser]);
 
-    // Close profile menu on outside click or Escape
+    // Close menus on outside click or Escape
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
                 setProfileMenuOpen(false);
             }
+            if (
+                mobileMenuOpen &&
+                mobileMenuRef.current &&
+                !mobileMenuRef.current.contains(e.target as Node) &&
+                mobileBtnRef.current &&
+                !mobileBtnRef.current.contains(e.target as Node)
+            ) {
+                setMobileMenuOpen(false);
+            }
         };
 
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') {
+                if (mobileMenuOpen) {
+                    setMobileMenuOpen(false);
+                    mobileBtnRef.current?.focus();
+                }
                 if (profileMenuOpen) {
                     setProfileMenuOpen(false);
                     profileBtnRef.current?.focus();
@@ -61,7 +76,7 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [profileMenuOpen, showSettingsModal]);
+    }, [profileMenuOpen, showSettingsModal, mobileMenuOpen]);
 
     const handleLogout = async () => {
         try {
@@ -114,15 +129,16 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
     const isDashboard = pathname === '/dashboard';
 
     return (
-        <nav style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 100,
-            backgroundColor: 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(8px)',
-            borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
-        }}>
+        <nav 
+            style={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 100,
+                backgroundColor: 'rgba(250, 247, 242, 0.95)',
+                backdropFilter: 'blur(8px)',
+                borderBottom: '1px solid #EDE8E1',
+            }}
+        >
             <div style={{
                 maxWidth: '1180px',
                 margin: '0 auto',
@@ -135,45 +151,93 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                 {/* Brand Logo */}
                 <Link 
                     href="/" 
+                    aria-label="JustCelebrateYou home"
+                    className="brand-logo"
                     style={{ 
-                        display: 'flex', 
+                        display: 'inline-flex', 
                         alignItems: 'center', 
-                        gap: '8px', 
-                        fontSize: 'clamp(1.1rem, 3vw, 1.25rem)', 
-                        fontWeight: 700, 
-                        color: 'var(--accent-color)', 
+                        gap: '7px', 
                         textDecoration: 'none',
-                        flexShrink: 0
+                        flexShrink: 0,
+                        lineHeight: 1,
+                        borderRadius: '6px',
                     }}
                 >
-                    <CalendarHeart size={22} style={{ color: 'var(--accent-color)' }} />
-                    <span style={{ letterSpacing: '-0.01em' }}>JustCelebrateYou</span>
+                    <CalendarHeart 
+                        size={22} 
+                        color="#FF795C" 
+                        strokeWidth={2.2} 
+                        style={{ flexShrink: 0 }} 
+                        aria-hidden="true" 
+                    />
+                    <span 
+                        className="brand-logo-text"
+                        style={{ 
+                            fontSize: 'clamp(1.05rem, 3.5vw, 1.25rem)', 
+                            fontWeight: 700, 
+                            letterSpacing: '-0.02em',
+                            whiteSpace: 'nowrap',
+                            display: 'inline-flex',
+                            alignItems: 'baseline',
+                        }}
+                    >
+                        <span style={{ color: '#1F2937' }}>JustCelebrate</span>
+                        <span style={{ color: '#FF795C' }}>You</span>
+                    </span>
                 </Link>
 
-                {/* Landing Navigation (Desktop) */}
+                {/* Landing Navigation */}
                 {isLanding ? (
                     <>
-                        <div className="landing-desktop-links" style={{
-                            display: 'none',
-                            alignItems: 'center',
-                            gap: '1.5rem',
-                        }}>
-                            <a href="#how-it-works" style={{ fontSize: '0.9rem', color: '#555', fontWeight: 500 }}>How It Works</a>
-                            <a href="#demo-preview" style={{ fontSize: '0.9rem', color: '#555', fontWeight: 500 }}>Demo Preview</a>
-                            <a href="#occasions" style={{ fontSize: '0.9rem', color: '#555', fontWeight: 500 }}>Occasions</a>
-                            <a href="#faq" style={{ fontSize: '0.9rem', color: '#555', fontWeight: 500 }}>FAQ</a>
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        {/* Desktop Navigation: Right side */}
+                        <div 
+                            className="landing-desktop-links" 
+                            style={{
+                                display: 'none',
+                                alignItems: 'center',
+                                gap: '1.5rem',
+                            }}
+                        >
+                            <a 
+                                href="#how-it-works" 
+                                style={{ 
+                                    fontSize: '0.925rem', 
+                                    color: '#4B5563', 
+                                    fontWeight: 500,
+                                    textDecoration: 'none',
+                                    transition: 'color 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#1F2937')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#4B5563')}
+                            >
+                                How It Works
+                            </a>
+                            <a 
+                                href="#faq" 
+                                style={{ 
+                                    fontSize: '0.925rem', 
+                                    color: '#4B5563', 
+                                    fontWeight: 500,
+                                    textDecoration: 'none',
+                                    transition: 'color 0.15s ease'
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#1F2937')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#4B5563')}
+                            >
+                                FAQ
+                            </a>
                             <Link 
                                 href="/login" 
                                 style={{ 
-                                    fontSize: '0.875rem', 
+                                    fontSize: '0.925rem', 
                                     fontWeight: 500, 
-                                    color: '#555', 
-                                    padding: '6px 10px',
-                                    display: 'inline-block'
+                                    color: '#4B5563', 
+                                    padding: '6px 4px',
+                                    textDecoration: 'none',
+                                    transition: 'color 0.15s ease'
                                 }}
+                                onMouseEnter={(e) => (e.currentTarget.style.color = '#1F2937')}
+                                onMouseLeave={(e) => (e.currentTarget.style.color = '#4B5563')}
                             >
                                 Log In
                             </Link>
@@ -181,30 +245,40 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                                 href="/login?redirect=/dashboard/create" 
                                 className="btn btn-primary" 
                                 style={{ 
-                                    padding: '0.45rem 0.85rem', 
+                                    padding: '9px 18px', 
                                     width: 'auto', 
-                                    fontSize: '0.85rem',
-                                    borderRadius: 'var(--radius-md)'
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    borderRadius: '10px'
                                 }}
                             >
                                 Create Celebration
                             </Link>
-
-                            <button
-                                type="button"
-                                aria-label="Toggle Navigation Menu"
-                                className="landing-mobile-menu-btn"
-                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                style={{
-                                    display: 'none',
-                                    padding: '6px',
-                                    color: '#555',
-                                    borderRadius: '6px',
-                                }}
-                            >
-                                {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
-                            </button>
                         </div>
+
+                        {/* Mobile Hamburger Button: Single-row header on mobile */}
+                        <button
+                            ref={mobileBtnRef}
+                            type="button"
+                            aria-label="Toggle navigation menu"
+                            aria-expanded={mobileMenuOpen}
+                            aria-controls="landing-mobile-menu"
+                            className="landing-mobile-menu-btn"
+                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                            style={{
+                                display: 'none',
+                                padding: '8px',
+                                color: '#1F2937',
+                                backgroundColor: 'transparent',
+                                border: '1px solid #E5E7EB',
+                                borderRadius: '8px',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+                        </button>
                     </>
                 ) : (
                     /* Dashboard / App Navigation matching Mockup */
@@ -472,6 +546,96 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                 </div>
             )}
 
+            {/* Mobile Navigation Drawer for Landing */}
+            {isLanding && mobileMenuOpen && (
+                <div
+                    ref={mobileMenuRef}
+                    id="landing-mobile-menu"
+                    role="dialog"
+                    aria-label="Mobile Navigation Menu"
+                    style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: '#FFFFFF',
+                        borderBottom: '1px solid #EDE8E1',
+                        boxShadow: '0 12px 28px rgba(0, 0, 0, 0.08)',
+                        padding: '1.25rem 1.5rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '0.75rem',
+                        zIndex: 99,
+                        animation: 'fadeIn 0.15s ease',
+                    }}
+                >
+                    <a 
+                        href="#how-it-works" 
+                        className="landing-mobile-menu-link"
+                        onClick={() => setMobileMenuOpen(false)}
+                        style={{ 
+                            fontSize: '1rem', 
+                            fontWeight: 500, 
+                            color: '#1F2937', 
+                            padding: '10px 0',
+                            borderBottom: '1px solid #F3F4F6',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        How It Works
+                    </a>
+                    <a 
+                        href="#faq" 
+                        className="landing-mobile-menu-link"
+                        onClick={() => setMobileMenuOpen(false)}
+                        style={{ 
+                            fontSize: '1rem', 
+                            fontWeight: 500, 
+                            color: '#1F2937', 
+                            padding: '10px 0',
+                            borderBottom: '1px solid #F3F4F6',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        FAQ
+                    </a>
+                    <Link 
+                        href="/login" 
+                        className="landing-mobile-menu-link"
+                        onClick={() => setMobileMenuOpen(false)}
+                        style={{ 
+                            fontSize: '1rem', 
+                            fontWeight: 500, 
+                            color: '#1F2937', 
+                            padding: '10px 0',
+                            borderBottom: '1px solid #F3F4F6',
+                            textDecoration: 'none'
+                        }}
+                    >
+                        Log In
+                    </Link>
+                    <Link 
+                        href="/login?redirect=/dashboard/create" 
+                        className="btn btn-primary landing-mobile-menu-link"
+                        onClick={() => setMobileMenuOpen(false)}
+                        style={{ 
+                            width: '100%',
+                            minHeight: '48px',
+                            padding: '12px',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            borderRadius: '12px',
+                            marginTop: '0.5rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        Create Celebration
+                    </Link>
+                </div>
+            )}
+
             <style jsx>{`
                 @media (min-width: 768px) {
                     :global(.landing-desktop-links) {
@@ -482,6 +646,11 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                     :global(.landing-mobile-menu-btn) {
                         display: inline-flex !important;
                     }
+                }
+                :global(.landing-mobile-menu-btn:focus-visible),
+                :global(.landing-mobile-menu-link:focus-visible) {
+                    outline: 2px solid var(--accent-color) !important;
+                    outline-offset: 2px !important;
                 }
             `}</style>
         </nav>

@@ -13,8 +13,8 @@ export default function LandingPage() {
             <Navbar isLanding={true} />
             <main>
                 <LandingHero />
-                <DemoPreview />
                 <HowItWorks />
+                <DemoPreview />
                 <KeepsakeSpotlight />
                 <OccasionsGrid />
                 <FAQSection />
