@@ -14,8 +14,8 @@ import {
 export default function OccasionsGrid() {
     const occasions = [
         {
-            title: 'Milestone Birthdays',
-            desc: 'Gather loved ones near and far to make their 18th, 30th, 50th, or 80th unforgettable.',
+            title: 'Birthdays',
+            desc: 'Make any birthday meaningful with video wishes from the people they love.',
             icon: <Cake size={22} />,
             isMemorial: false,
         },

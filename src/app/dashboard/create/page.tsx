@@ -162,7 +162,7 @@ export default function CreateCelebrationPage() {
                                 id="title"
                                 type="text"
                                 className="form-input"
-                                placeholder="e.g. 80th Birthday Celebration, Graduation Tribute"
+                                placeholder="e.g. Birthday Celebration, Graduation Tribute"
                                 required
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
