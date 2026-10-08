@@ -11,11 +11,19 @@ export default async function ClaimPage({ params }: { params: Promise<{ token: s
     if (!event) notFound();
 
     const userId = (await cookies()).get('session')?.value;
+    let currentUser: { name: string | null; email: string } | null = null;
+    if (userId) {
+        const u = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { name: true, email: true }
+        });
+        if (u) currentUser = u;
+    }
     const isLoggedIn = !!userId;
 
     return (
         <>
-            <Navbar />
+            <Navbar user={currentUser ? { name: currentUser.name, email: currentUser.email } : undefined} />
             <ClaimClient event={event} isLoggedIn={isLoggedIn} token={token} />
         </>
     );

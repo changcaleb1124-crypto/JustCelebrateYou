@@ -2,6 +2,25 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 
+export async function GET() {
+    try {
+        const userId = (await cookies()).get('session')?.value;
+        if (!userId) {
+            return NextResponse.json({ user: null });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true, name: true, email: true }
+        });
+
+        return NextResponse.json({ user: user || null });
+    } catch (e: unknown) {
+        console.error('Profile fetch error:', e);
+        return NextResponse.json({ user: null });
+    }
+}
+
 export async function PUT(req: Request) {
     try {
         const userId = (await cookies()).get('session')?.value;

@@ -29,13 +29,23 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
     const mobileMenuRef = useRef<HTMLDivElement>(null);
     const mobileBtnRef = useRef<HTMLButtonElement>(null);
 
-    // Sync initialUser if updated
+    // Sync initialUser if updated or fetch on client if unprovided on non-landing routes
     useEffect(() => {
         if (initialUser) {
             setCurrentUser(initialUser);
             setNameInput(initialUser.name || '');
+        } else if (!isLanding) {
+            fetch('/api/auth/profile')
+                .then(res => res.json())
+                .then(data => {
+                    if (data?.user) {
+                        setCurrentUser(data.user);
+                        setNameInput(data.user.name || '');
+                    }
+                })
+                .catch(() => {});
         }
-    }, [initialUser]);
+    }, [initialUser, isLanding]);
 
     // Close menus on outside click or Escape
     useEffect(() => {
@@ -124,7 +134,7 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
         ? currentUser.name.trim().charAt(0).toUpperCase()
         : currentUser?.email
         ? currentUser.email.charAt(0).toUpperCase()
-        : 'C';
+        : '?';
 
     const isDashboard = pathname === '/dashboard';
 
@@ -280,8 +290,8 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                             {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
                         </button>
                     </>
-                ) : (
-                    /* Dashboard / App Navigation matching Mockup */
+                ) : currentUser ? (
+                    /* Dashboard / App Navigation matching Mockup (Signed-in) */
                     <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
                         {/* Dashboard Link with Coral Underline when Active */}
                         <Link
@@ -422,6 +432,34 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                                 </div>
                             )}
                         </div>
+                    </div>
+                ) : (
+                    /* Public / Guest Navigation (Signed-out) */
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                        <Link
+                            href={pathname && pathname !== '/' ? `/login?redirect=${encodeURIComponent(pathname)}` : '/login'}
+                            style={{
+                                fontSize: '0.925rem',
+                                fontWeight: 600,
+                                color: '#4B5563',
+                                padding: '6px 14px',
+                                textDecoration: 'none',
+                                borderRadius: '8px',
+                                transition: 'all 0.15s ease',
+                                border: '1px solid #E5E7EB',
+                                backgroundColor: '#FFFFFF',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.color = '#1F2937';
+                                e.currentTarget.style.borderColor = '#D1D5DB';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.color = '#4B5563';
+                                e.currentTarget.style.borderColor = '#E5E7EB';
+                            }}
+                        >
+                            Log In
+                        </Link>
                     </div>
                 )}
             </div>
