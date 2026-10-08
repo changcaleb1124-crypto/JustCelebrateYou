@@ -5,6 +5,7 @@ import { Video, Copy, CheckCircle2, Trash2, Upload, Camera } from 'lucide-react'
 import VideoRecorder from '@/components/VideoRecorder';
 import CelebrationCover from '@/components/CelebrationCover';
 import CoverUploadModal from '@/components/CoverUploadModal';
+import { copyToClipboard } from '@/lib/url';
 
 type Message = {
     id: string;
@@ -51,7 +52,7 @@ export default function MemoryPageClient({
             const res = await fetch(`/api/events/${event.id}/invite-link`, { method: 'POST' });
             const data = await res.json();
             if (res.ok && data.inviteUrl) {
-                navigator.clipboard.writeText(data.inviteUrl);
+                await copyToClipboard(data.inviteUrl);
                 setCopied(true);
                 setTimeout(() => setCopied(false), 2000);
             } else {
@@ -278,7 +279,10 @@ export default function MemoryPageClient({
                             <div className="mt-3 p-3 rounded flex justify-between items-center" style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', flexWrap: 'wrap', gap: '8px' }}>
                                 <code style={{ fontSize: '0.825rem', wordBreak: 'break-all', color: '#374151', flex: 1, minWidth: '180px' }}>{claimLink}</code>
                                 <button
-                                    onClick={() => { navigator.clipboard.writeText(claimLink); alert('Recipient claim link copied!'); }}
+                                    onClick={async () => {
+                                        await copyToClipboard(claimLink);
+                                        alert('Recipient claim link copied!');
+                                    }}
                                     style={{ padding: '4px 10px', color: '#9A3412', fontWeight: 600, border: '1px solid #FED7AA', borderRadius: '6px', background: '#FFEDD5', fontSize: '0.8rem', cursor: 'pointer' }}
                                 >
                                     Copy Link

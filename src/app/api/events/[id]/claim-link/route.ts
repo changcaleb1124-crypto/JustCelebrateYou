@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
 import crypto from 'crypto';
+import { getClaimUrl } from '@/lib/url';
 
 async function handleClaimLink(req: Request, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -29,8 +30,8 @@ async function handleClaimLink(req: Request, { params }: { params: Promise<{ id:
             });
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        return NextResponse.json({ claimToken: token, claimUrl: `${baseUrl}/claim/${token}` });
+        const claimUrl = getClaimUrl(token, req);
+        return NextResponse.json({ claimToken: token, claimUrl });
     } catch (e: unknown) {
         console.error('Error generating claim link:', e);
         return NextResponse.json({ error: (e as Error).message || 'Internal server error' }, { status: 500 });

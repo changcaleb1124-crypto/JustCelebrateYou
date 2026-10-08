@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import CelebrationCover from '@/components/CelebrationCover';
 import CoverUploadModal from '@/components/CoverUploadModal';
+import { copyToClipboard } from '@/lib/url';
 
 export type EventPreview = {
     id: string;
@@ -1204,8 +1205,8 @@ export default function DashboardClient({
                             </code>
                             <button
                                 type="button"
-                                onClick={() => {
-                                    navigator.clipboard.writeText(shareModal.url);
+                                onClick={async () => {
+                                    await copyToClipboard(shareModal.url);
                                     setCopiedModalLink(true);
                                     setTimeout(() => setCopiedModalLink(false), 2000);
                                 }}

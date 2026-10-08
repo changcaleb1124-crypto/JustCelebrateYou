@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { cookies } from 'next/headers';
+import { getInviteUrl } from '@/lib/url';
 
 /**
  * POST /api/events/[id]/invite-link
@@ -36,8 +37,7 @@ async function handleInviteLink(
             );
         }
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-        const inviteUrl = `${baseUrl}/event/${event.id}`;
+        const inviteUrl = getInviteUrl(event.id, req);
 
         return NextResponse.json({
             success: true,
