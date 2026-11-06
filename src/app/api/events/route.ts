@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 
 export async function POST(req: Request) {
     try {
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

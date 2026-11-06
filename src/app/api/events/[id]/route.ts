@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -23,7 +23,7 @@ export async function GET(
             return NextResponse.json({ error: 'Event not found' }, { status: 404 });
         }
 
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         const isCreator = Boolean(userId && event.userId && userId === event.userId);
 
         const sanitizedEvent = {
@@ -44,7 +44,7 @@ export async function PATCH(
 ) {
     try {
         const { id } = await params;
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const event = await prisma.event.findUnique({ where: { id } });
@@ -83,7 +83,7 @@ export async function DELETE(
 ) {
     try {
         const { id } = await params;
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const event = await prisma.event.findUnique({

@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 
 export async function GET() {
     try {
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) {
             return NextResponse.json({ user: null });
         }
@@ -23,7 +23,7 @@ export async function GET() {
 
 export async function PUT(req: Request) {
     try {
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -41,7 +41,6 @@ export async function PUT(req: Request) {
         return NextResponse.json({ success: true, user: { id: user.id, name: user.name } });
     } catch (e: unknown) {
         console.error('Profile update error:', e);
-        // Pass the actual Prisma/Server error back so the frontend can display it instead of a generic 500
         const message = (e as Error)?.message;
         return NextResponse.json({ 
             error: message ? `Server Error: ${message}` : 'An unexpected server error occurred.' 

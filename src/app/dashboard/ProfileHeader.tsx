@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, X, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import ModalPortal from '@/components/ModalPortal';
 
 export default function ProfileHeader({ user }: { user: { email: string, name: string | null } }) {
     const [localName, setLocalName] = useState(user.name);
@@ -71,36 +72,58 @@ export default function ProfileHeader({ user }: { user: { email: string, name: s
             </p>
             
             {showModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-                    <div className="card animate-fade-in" style={{ maxWidth: '400px', width: '100%', position: 'relative' }}>
-                        <button onClick={() => setShowModal(false)} style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
-                            <X size={20} />
-                        </button>
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-color)' }}>Edit Profile</h2>
-                        <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Choose how you&apos;d like to be greeted.</p>
-                        
-                        {errorMsg && <div style={{ color: 'var(--error-color)', marginBottom: '1rem', fontWeight: 500, backgroundColor: 'rgba(220,38,38,0.1)', padding: '0.75rem', borderRadius: '4px' }}>{errorMsg}</div>}
-                        {successMsg && <div style={{ color: 'green', marginBottom: '1rem', fontWeight: 500, backgroundColor: 'rgba(0,128,0,0.1)', padding: '0.75rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle2 size={16} /> {successMsg}</div>}
-                        
-                        <form onSubmit={handleSave} style={{ textAlign: 'left' }}>
-                            <div className="form-group">
-                                <label className="form-label" htmlFor="edit-name">Display Name</label>
-                                <input
-                                    id="edit-name"
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="Enter your name"
-                                    required
-                                    value={nameInput}
-                                    onChange={(e) => setNameInput(e.target.value)}
-                                />
-                            </div>
-                            <button type="submit" className="btn btn-primary btn-full mt-2" disabled={loading}>
-                                {loading ? 'Saving...' : 'Save Changes'}
+                <ModalPortal>
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        className="modal-overlay"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) setShowModal(false);
+                        }}
+                    >
+                        <div className="modal-content" style={{ maxWidth: '400px' }}>
+                            <button
+                                type="button"
+                                onClick={() => setShowModal(false)}
+                                aria-label="Close dialog"
+                                style={{
+                                    position: 'absolute',
+                                    top: '1.25rem',
+                                    right: '1.25rem',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#666'
+                                }}
+                            >
+                                <X size={20} />
                             </button>
-                        </form>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-color)' }}>Edit Profile</h2>
+                            <p style={{ color: '#666', marginBottom: '1.5rem', fontSize: '0.9rem' }}>Choose how you&apos;d like to be greeted.</p>
+                            
+                            {errorMsg && <div style={{ color: 'var(--error-color)', marginBottom: '1rem', fontWeight: 500, backgroundColor: 'rgba(220,38,38,0.1)', padding: '0.75rem', borderRadius: '4px' }}>{errorMsg}</div>}
+                            {successMsg && <div style={{ color: 'green', marginBottom: '1rem', fontWeight: 500, backgroundColor: 'rgba(0,128,0,0.1)', padding: '0.75rem', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}><CheckCircle2 size={16} /> {successMsg}</div>}
+                            
+                            <form onSubmit={handleSave} style={{ textAlign: 'left' }}>
+                                <div className="form-group">
+                                    <label className="form-label" htmlFor="edit-name">Display Name</label>
+                                    <input
+                                        id="edit-name"
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Enter your name"
+                                        required
+                                        value={nameInput}
+                                        onChange={(e) => setNameInput(e.target.value)}
+                                    />
+                                </div>
+                                <button type="submit" className="btn btn-primary btn-full mt-2" disabled={loading}>
+                                    {loading ? 'Saving...' : 'Save Changes'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                </div>
+                </ModalPortal>
             )}
         </div>
     );

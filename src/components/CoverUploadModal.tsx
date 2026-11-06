@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { X, Upload, Trash2, Loader2, Image as ImageIcon } from 'lucide-react';
 import CelebrationCover from './CelebrationCover';
+import ModalPortal from './ModalPortal';
 
 interface CoverUploadModalProps {
     eventId: string;
@@ -155,40 +156,24 @@ export default function CoverUploadModal({
     const displayedCoverUrl = previewUrl || currentCoverUrl;
 
     return (
-        <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cover-modal-title"
-            style={{
-                position: 'fixed',
-                inset: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.55)',
-                backdropFilter: 'blur(3px)',
-                zIndex: 1000,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '1rem',
-            }}
-            onClick={(e) => {
-                if (e.target === e.currentTarget) onClose();
-            }}
-        >
+        <ModalPortal>
             <div
-                ref={modalRef}
-                className="card animate-fade-in"
-                style={{
-                    maxWidth: '480px',
-                    width: '100%',
-                    backgroundColor: '#FFFFFF',
-                    borderRadius: '16px',
-                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                    padding: '1.75rem',
-                    position: 'relative',
-                    border: '1px solid rgba(0,0,0,0.06)',
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="cover-modal-title"
+                className="modal-overlay"
+                onClick={(e) => {
+                    if (e.target === e.currentTarget) onClose();
                 }}
             >
-                {/* Header */}
+                <div
+                    ref={modalRef}
+                    className="modal-content"
+                    style={{
+                        maxWidth: '480px',
+                    }}
+                >
+                    {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <ImageIcon size={20} style={{ color: 'var(--accent-color)' }} />
@@ -334,5 +319,6 @@ export default function CoverUploadModal({
                 </div>
             </div>
         </div>
+    </ModalPortal>
     );
 }

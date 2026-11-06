@@ -1,11 +1,11 @@
-import { cookies } from 'next/headers';
 import { prisma } from '@/lib/db';
 import { redirect } from 'next/navigation';
 import DashboardClient, { type EventPreview } from './DashboardClient';
 import Navbar from '@/components/Navbar';
+import { getCurrentUserId } from '@/lib/session';
 
 export default async function DashboardPage() {
-    const userId = (await cookies()).get('session')?.value;
+    const userId = await getCurrentUserId();
     if (!userId) redirect('/login');
 
     const user = await prisma.user.findUnique({

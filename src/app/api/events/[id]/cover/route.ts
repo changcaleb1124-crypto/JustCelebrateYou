@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 import { put, del } from '@vercel/blob';
 import path from 'path';
 import fs from 'fs/promises';
@@ -75,7 +75,7 @@ export async function POST(
 ) {
     try {
         const { id: eventId } = await params;
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized: Please log in' }, { status: 401 });
         }
@@ -216,7 +216,7 @@ export async function DELETE(
 ) {
     try {
         const { id: eventId } = await params;
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized: Please log in' }, { status: 401 });
         }

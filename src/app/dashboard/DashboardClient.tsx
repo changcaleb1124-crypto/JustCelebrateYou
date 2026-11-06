@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import CelebrationCover from '@/components/CelebrationCover';
 import CoverUploadModal from '@/components/CoverUploadModal';
+import ModalPortal from '@/components/ModalPortal';
 import { copyToClipboard } from '@/lib/url';
 
 export type EventPreview = {
@@ -1045,203 +1046,174 @@ export default function DashboardClient({
 
             {/* MODAL: Delete Confirmation (Creator Only) */}
             {deleteModalEvent && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="delete-dialog-title"
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.55)',
-                        backdropFilter: 'blur(3px)',
-                        zIndex: 1000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem',
-                    }}
-                    onClick={e => {
-                        if (e.target === e.currentTarget) setDeleteModalEvent(null);
-                    }}
-                >
+                <ModalPortal>
                     <div
-                        className="card animate-fade-in"
-                        style={{
-                            maxWidth: '420px',
-                            width: '100%',
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '16px',
-                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                            padding: '1.75rem',
-                            border: '1px solid rgba(0,0,0,0.06)',
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="delete-dialog-title"
+                        className="modal-overlay"
+                        onClick={e => {
+                            if (e.target === e.currentTarget) setDeleteModalEvent(null);
                         }}
                     >
-                        <h2 id="delete-dialog-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#DC2626', marginBottom: '0.75rem' }}>
-                            Delete Celebration?
-                        </h2>
-                        <p style={{ color: '#4B5563', fontSize: '0.925rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                            Are you sure you want to delete <strong>{deleteModalEvent.title}</strong>? This action will permanently remove all collected video messages and cannot be undone.
-                        </p>
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button
-                                type="button"
-                                onClick={() => setDeleteModalEvent(null)}
-                                className="btn btn-outline"
-                                style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
-                                disabled={isDeleting}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleConfirmDelete}
-                                className="btn"
-                                style={{
-                                    flex: 1,
-                                    padding: '10px 14px',
-                                    fontSize: '0.9rem',
-                                    borderRadius: '10px',
-                                    backgroundColor: '#DC2626',
-                                    color: '#FFFFFF',
-                                }}
-                                disabled={isDeleting}
-                            >
-                                {isDeleting ? 'Deleting...' : 'Delete'}
-                            </button>
+                        <div
+                            className="modal-content"
+                            style={{
+                                maxWidth: '420px',
+                            }}
+                        >
+                            <h2 id="delete-dialog-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#DC2626', marginBottom: '0.75rem' }}>
+                                Delete Celebration?
+                            </h2>
+                            <p style={{ color: '#4B5563', fontSize: '0.925rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
+                                Are you sure you want to delete <strong>{deleteModalEvent.title}</strong>? This action will permanently remove all collected video messages and cannot be undone.
+                            </p>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setDeleteModalEvent(null)}
+                                    className="btn btn-outline"
+                                    style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
+                                    disabled={isDeleting}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmDelete}
+                                    className="btn"
+                                    style={{
+                                        flex: 1,
+                                        padding: '10px 14px',
+                                        fontSize: '0.9rem',
+                                        borderRadius: '10px',
+                                        backgroundColor: '#DC2626',
+                                        color: '#FFFFFF',
+                                    }}
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? 'Deleting...' : 'Delete'}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </ModalPortal>
             )}
 
             {/* MODAL: Share Links (Clear separation between Invite Contributors & Gift to Recipient) */}
             {shareModal.isOpen && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="share-modal-title"
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.55)',
-                        backdropFilter: 'blur(3px)',
-                        zIndex: 1000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem',
-                    }}
-                    onClick={e => {
-                        if (e.target === e.currentTarget) setShareModal(prev => ({ ...prev, isOpen: false }));
-                    }}
-                >
+                <ModalPortal>
                     <div
-                        className="card animate-fade-in"
-                        style={{
-                            maxWidth: '480px',
-                            width: '100%',
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '16px',
-                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                            padding: '1.75rem',
-                            border: '1px solid rgba(0,0,0,0.06)',
-                            position: 'relative',
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="share-modal-title"
+                        className="modal-overlay"
+                        onClick={e => {
+                            if (e.target === e.currentTarget) setShareModal(prev => ({ ...prev, isOpen: false }));
                         }}
                     >
-                        <button
-                            type="button"
-                            onClick={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
-                            aria-label="Close dialog"
-                            style={{
-                                position: 'absolute',
-                                top: '1.25rem',
-                                right: '1.25rem',
-                                background: 'none',
-                                border: 'none',
-                                color: '#6B7280',
-                                cursor: 'pointer',
-                                padding: '4px',
-                            }}
-                        >
-                            <X size={20} />
-                        </button>
-
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                            {shareModal.type === 'gift' ? (
-                                <Gift size={22} style={{ color: 'var(--accent-color)' }} />
-                            ) : (
-                                <Mail size={22} style={{ color: 'var(--accent-color)' }} />
-                            )}
-                            <h2 id="share-modal-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1F2937', margin: 0 }}>
-                                {shareModal.title}
-                            </h2>
-                        </div>
-
-                        <p style={{ color: '#4B5563', fontSize: '0.925rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                            {shareModal.description}
-                        </p>
-
                         <div
+                            className="modal-content"
                             style={{
-                                backgroundColor: '#F9FAFB',
-                                border: '1px solid #E5E7EB',
-                                borderRadius: '10px',
-                                padding: '0.75rem 1rem',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '10px',
-                                marginBottom: '1.5rem',
+                                maxWidth: '480px',
                             }}
                         >
-                            <code
-                                style={{
-                                    fontSize: '0.85rem',
-                                    color: '#374151',
-                                    wordBreak: 'break-all',
-                                    fontFamily: 'monospace',
-                                }}
-                            >
-                                {shareModal.url}
-                            </code>
-                            <button
-                                type="button"
-                                onClick={async () => {
-                                    await copyToClipboard(shareModal.url);
-                                    setCopiedModalLink(true);
-                                    setTimeout(() => setCopiedModalLink(false), 2000);
-                                }}
-                                className="btn btn-primary"
-                                style={{
-                                    padding: '7px 14px',
-                                    fontSize: '0.825rem',
-                                    borderRadius: '8px',
-                                    flexShrink: 0,
-                                }}
-                            >
-                                {copiedModalLink ? (
-                                    <>
-                                        <Check size={14} /> Copied!
-                                    </>
-                                ) : (
-                                    <>
-                                        <Copy size={14} /> Copy
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <button
                                 type="button"
                                 onClick={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
-                                className="btn btn-outline"
-                                style={{ padding: '8px 18px', fontSize: '0.9rem', borderRadius: '10px' }}
+                                aria-label="Close dialog"
+                                style={{
+                                    position: 'absolute',
+                                    top: '1.25rem',
+                                    right: '1.25rem',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#6B7280',
+                                    cursor: 'pointer',
+                                    padding: '4px',
+                                }}
                             >
-                                Done
+                                <X size={20} />
                             </button>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                                {shareModal.type === 'gift' ? (
+                                    <Gift size={22} style={{ color: 'var(--accent-color)' }} />
+                                ) : (
+                                    <Mail size={22} style={{ color: 'var(--accent-color)' }} />
+                                )}
+                                <h2 id="share-modal-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1F2937', margin: 0 }}>
+                                    {shareModal.title}
+                                </h2>
+                            </div>
+
+                            <p style={{ color: '#4B5563', fontSize: '0.925rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
+                                {shareModal.description}
+                            </p>
+
+                            <div
+                                style={{
+                                    backgroundColor: '#F9FAFB',
+                                    border: '1px solid #E5E7EB',
+                                    borderRadius: '10px',
+                                    padding: '0.75rem 1rem',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: '10px',
+                                    marginBottom: '1.5rem',
+                                }}
+                            >
+                                <code
+                                    style={{
+                                        fontSize: '0.85rem',
+                                        color: '#374151',
+                                        wordBreak: 'break-all',
+                                        fontFamily: 'monospace',
+                                    }}
+                                >
+                                    {shareModal.url}
+                                </code>
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        await copyToClipboard(shareModal.url);
+                                        setCopiedModalLink(true);
+                                        setTimeout(() => setCopiedModalLink(false), 2000);
+                                    }}
+                                    className="btn btn-primary"
+                                    style={{
+                                        padding: '7px 14px',
+                                        fontSize: '0.825rem',
+                                        borderRadius: '8px',
+                                        flexShrink: 0,
+                                    }}
+                                >
+                                    {copiedModalLink ? (
+                                        <>
+                                            <Check size={14} /> Copied!
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Copy size={14} /> Copy
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
+                                    className="btn btn-outline"
+                                    style={{ padding: '8px 18px', fontSize: '0.9rem', borderRadius: '10px' }}
+                                >
+                                    Done
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                </ModalPortal>
             )}
         </div>
     );

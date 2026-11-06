@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { setSessionCookie } from '@/lib/session';
 
 export async function POST(req: Request) {
     try {
@@ -25,15 +25,7 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: 'Invalid password' }, { status: 401 });
             }
         }
-
-        const cookieStore = await cookies();
-        cookieStore.set('session', user.id, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 7,
-            path: '/'
-        });
+        await setSessionCookie(user.id);
 
         return NextResponse.json({ success: true, user: { id: user.id, email: user.email, name: user.name } });
     } catch (error) {

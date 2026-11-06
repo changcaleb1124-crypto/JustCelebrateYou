@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Video, Copy, CheckCircle2, Trash2, Upload, Camera } from 'lucide-react';
+import { Video, Copy, CheckCircle2, Trash2, Upload, Camera, AlertCircle } from 'lucide-react';
 import VideoRecorder from '@/components/VideoRecorder';
 import CelebrationCover from '@/components/CelebrationCover';
 import CoverUploadModal from '@/components/CoverUploadModal';
@@ -39,6 +39,7 @@ export default function MemoryPageClient({
     const [showCoverModal, setShowCoverModal] = useState(false);
     const [showRecorder, setShowRecorder] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
     const [generatingLink, setGeneratingLink] = useState(false);
     const [claimLink, setClaimLink] = useState('');
@@ -65,19 +66,25 @@ export default function MemoryPageClient({
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setUploadError(null);
         const file = e.target.files?.[0];
         if (!file) return;
 
         const MAX_SIZE = 50 * 1024 * 1024; // 50MB
         if (file.size > MAX_SIZE) {
-            alert("Video is too large. Please keep it under 50MB.");
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            setUploadError(`Video is too large (${sizeMB}MB). Please keep it under 50MB.`);
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
-        const validTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
-        if (!validTypes.includes(file.type)) {
-            alert("Invalid file type. Please upload an MP4, WebM, or MOV video.");
+        const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'];
+        const validExts = ['.mp4', '.webm', '.mov', '.m4v'];
+        const fileExt = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        const isTypeValid = (file.type && validTypes.includes(file.type)) || validExts.includes(fileExt);
+
+        if (!isTypeValid) {
+            setUploadError("Invalid file type. Please upload an MP4, WebM, or MOV video.");
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
@@ -227,7 +234,7 @@ export default function MemoryPageClient({
                         type="file" 
                         ref={fileInputRef}
                         style={{ display: 'none' }}
-                        accept="video/mp4,video/webm,video/quicktime"
+                        accept="video/mp4,video/webm,video/quicktime,video/*,.mov,.mp4,.webm,.m4v"
                         onChange={handleFileChange}
                     />
                     {/* Share Link button is strictly visible ONLY to the project creator */}
@@ -243,6 +250,27 @@ export default function MemoryPageClient({
                         </button>
                     )}
                 </div>
+
+                {uploadError && (
+                    <div style={{
+                        color: '#DC2626',
+                        backgroundColor: '#FEF2F2',
+                        border: '1px solid #FCA5A5',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '8px',
+                        fontSize: '0.85rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        maxWidth: '520px',
+                        margin: '1.25rem auto 0 auto',
+                        textAlign: 'center'
+                    }}>
+                        <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                        <span>{uploadError}</span>
+                    </div>
+                )}
 
                 {/* Gifting Callout (Creator Only) */}
                 {isCreator && !event.recipientUserId && (
@@ -344,6 +372,16 @@ export default function MemoryPageClient({
                                     controls
                                     className="video-player"
                                     preload="metadata"
+                                    onLoadedMetadata={(e) => {
+                                        const v = e.currentTarget;
+                                        if (v.duration === Infinity) {
+                                            v.currentTime = 1e101;
+                                            v.addEventListener('timeupdate', function reset() {
+                                                v.removeEventListener('timeupdate', reset);
+                                                v.currentTime = 0;
+                                            }, { once: true });
+                                        }
+                                    }}
                                 />
                                 <div className="video-info" style={{ padding: '0.75rem 1rem' }}>
                                     <h3 className="video-sender" style={{ fontSize: '1rem', fontWeight: 600, color: '#1F2937' }}>{msg.senderName}</h3>

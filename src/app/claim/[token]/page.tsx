@@ -2,7 +2,7 @@ import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import ClaimClient from './ClaimClient';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 
 export default async function ClaimPage({ params }: { params: Promise<{ token: string }> }) {
     const { token } = await params;
@@ -10,7 +10,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ token: s
     
     if (!event) notFound();
 
-    const userId = (await cookies()).get('session')?.value;
+    const userId = await getCurrentUserId();
     let currentUser: { name: string | null; email: string } | null = null;
     if (userId) {
         const u = await prisma.user.findUnique({

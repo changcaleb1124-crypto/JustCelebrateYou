@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 import { getInviteUrl } from '@/lib/url';
 
 /**
@@ -15,7 +15,7 @@ async function handleInviteLink(
 ) {
     try {
         const { id } = await params;
-        const userId = (await cookies()).get('session')?.value;
+        const userId = await getCurrentUserId();
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized: Please log in' }, { status: 401 });
         }

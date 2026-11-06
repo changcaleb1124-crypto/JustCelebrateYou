@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import MemoryPageClient from './MemoryPageClient';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
+import { getCurrentUserId } from '@/lib/session';
 import { ArrowLeft } from 'lucide-react';
 
 export default async function CelebrationPage(props: { params: Promise<{ id: string }> }) {
@@ -21,7 +21,7 @@ export default async function CelebrationPage(props: { params: Promise<{ id: str
 
     if (!event) notFound();
 
-    const userId = (await cookies()).get('session')?.value;
+    const userId = await getCurrentUserId();
     let currentUser: { name: string | null; email: string } | null = null;
 
     if (userId) {

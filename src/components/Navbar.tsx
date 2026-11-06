@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { CalendarHeart, Menu, X, ChevronDown, User as UserIcon, Settings, LogOut, CheckCircle2 } from 'lucide-react';
+import ModalPortal from './ModalPortal';
 
 interface NavbarProps {
     isLanding?: boolean;
@@ -466,122 +467,107 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
 
             {/* Profile Settings Modal */}
             {showSettingsModal && (
-                <div
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="settings-modal-title"
-                    style={{
-                        position: 'fixed',
-                        inset: 0,
-                        backgroundColor: 'rgba(0, 0, 0, 0.55)',
-                        backdropFilter: 'blur(3px)',
-                        zIndex: 1000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '1rem',
-                    }}
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) setShowSettingsModal(false);
-                    }}
-                >
+                <ModalPortal>
                     <div
-                        className="card animate-fade-in"
-                        style={{
-                            maxWidth: '420px',
-                            width: '100%',
-                            backgroundColor: '#FFFFFF',
-                            borderRadius: '16px',
-                            boxShadow: '0 20px 40px rgba(0, 0, 0, 0.12)',
-                            padding: '1.75rem',
-                            position: 'relative',
-                            border: '1px solid rgba(0,0,0,0.06)',
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="settings-modal-title"
+                        className="modal-overlay"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) setShowSettingsModal(false);
                         }}
                     >
-                        <button
-                            type="button"
-                            onClick={() => setShowSettingsModal(false)}
-                            aria-label="Close dialog"
+                        <div
+                            className="modal-content"
                             style={{
-                                position: 'absolute',
-                                top: '1.25rem',
-                                right: '1.25rem',
-                                background: 'none',
-                                border: 'none',
-                                cursor: 'pointer',
-                                color: '#6B7280',
-                                padding: '4px'
+                                maxWidth: '420px',
                             }}
                         >
-                            <X size={20} />
-                        </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowSettingsModal(false)}
+                                aria-label="Close dialog"
+                                style={{
+                                    position: 'absolute',
+                                    top: '1.25rem',
+                                    right: '1.25rem',
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    color: '#6B7280',
+                                    padding: '4px'
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                            <UserIcon size={20} style={{ color: 'var(--accent-color)' }} />
-                            <h2 id="settings-modal-title" style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1F2937', margin: 0 }}>
-                                Account Settings
-                            </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
+                                <UserIcon size={20} style={{ color: 'var(--accent-color)' }} />
+                                <h2 id="settings-modal-title" style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1F2937', margin: 0 }}>
+                                    Account Settings
+                                </h2>
+                            </div>
+                            <p style={{ color: '#6B7280', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
+                                Customize how your name appears on celebrations you create.
+                            </p>
+
+                            {nameError && (
+                                <div style={{ color: '#DC2626', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                                    {nameError}
+                                </div>
+                            )}
+                            {nameSuccess && (
+                                <div style={{ color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <CheckCircle2 size={16} /> {nameSuccess}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSaveName}>
+                                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                                    <label className="form-label" htmlFor="profile-display-name" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151', display: 'block', marginBottom: '6px' }}>
+                                        Display Name
+                                    </label>
+                                    <input
+                                        id="profile-display-name"
+                                        type="text"
+                                        className="form-input"
+                                        placeholder="Enter your name"
+                                        required
+                                        value={nameInput}
+                                        onChange={(e) => setNameInput(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid #D1D5DB',
+                                            fontSize: '0.95rem'
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowSettingsModal(false)}
+                                        className="btn btn-outline"
+                                        style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
+                                        disabled={isSavingName}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                        style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
+                                        disabled={isSavingName}
+                                    >
+                                        {isSavingName ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <p style={{ color: '#6B7280', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
-                            Customize how your name appears on celebrations you create.
-                        </p>
-
-                        {nameError && (
-                            <div style={{ color: '#DC2626', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                                {nameError}
-                            </div>
-                        )}
-                        {nameSuccess && (
-                            <div style={{ color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <CheckCircle2 size={16} /> {nameSuccess}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSaveName}>
-                            <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                                <label className="form-label" htmlFor="profile-display-name" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151', display: 'block', marginBottom: '6px' }}>
-                                    Display Name
-                                </label>
-                                <input
-                                    id="profile-display-name"
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="Enter your name"
-                                    required
-                                    value={nameInput}
-                                    onChange={(e) => setNameInput(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px 12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid #D1D5DB',
-                                        fontSize: '0.95rem'
-                                    }}
-                                />
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowSettingsModal(false)}
-                                    className="btn btn-outline"
-                                    style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
-                                    disabled={isSavingName}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
-                                    disabled={isSavingName}
-                                >
-                                    {isSavingName ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                        </form>
                     </div>
-                </div>
+                </ModalPortal>
             )}
 
             {/* Mobile Navigation Drawer for Landing */}
