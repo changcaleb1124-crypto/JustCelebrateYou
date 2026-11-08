@@ -403,6 +403,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
                     fileName: uploadResult.fileName,
                     fileSize: uploadResult.fileSize,
                     mimeType: uploadResult.mimeType,
+                    uploadId: uploadResult.uploadId,
+                    uploadToken: uploadResult.uploadToken,
                 }),
             });
 

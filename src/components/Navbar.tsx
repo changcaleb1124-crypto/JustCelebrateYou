@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { CalendarHeart, Menu, X, ChevronDown, User as UserIcon, Settings, LogOut, CheckCircle2 } from 'lucide-react';
-import ModalPortal from './ModalPortal';
+import { CalendarHeart, Menu, X, ChevronDown, Settings, LogOut, KeyRound } from 'lucide-react';
+import AccountSettingsModal from './AccountSettingsModal';
 
 interface NavbarProps {
     isLanding?: boolean;
@@ -16,32 +16,29 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-    const [currentUser, setCurrentUser] = useState(initialUser || null);
+    
+    // User state
+    const [fetchedUser, setFetchedUser] = useState<{ name: string | null; email?: string | null } | null>(null);
+    const [userOverride, setUserOverride] = useState<{ name: string | null; email?: string | null } | null>(null);
+    const currentUser = userOverride ?? initialUser ?? fetchedUser;
 
     // Profile settings modal state
     const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [nameInput, setNameInput] = useState(initialUser?.name || '');
-    const [isSavingName, setIsSavingName] = useState(false);
-    const [nameError, setNameError] = useState('');
-    const [nameSuccess, setNameSuccess] = useState('');
+    const [initialSettingsTab, setInitialSettingsTab] = useState<'profile' | 'password'>('profile');
 
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const profileBtnRef = useRef<HTMLButtonElement>(null);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
     const mobileBtnRef = useRef<HTMLButtonElement>(null);
 
-    // Sync initialUser if updated or fetch on client if unprovided on non-landing routes
+    // Fetch user on client only if unprovided on non-landing routes
     useEffect(() => {
-        if (initialUser) {
-            setCurrentUser(initialUser);
-            setNameInput(initialUser.name || '');
-        } else if (!isLanding) {
+        if (!initialUser && !isLanding) {
             fetch('/api/auth/profile')
                 .then(res => res.json())
                 .then(data => {
                     if (data?.user) {
-                        setCurrentUser(data.user);
-                        setNameInput(data.user.name || '');
+                        setFetchedUser(data.user);
                     }
                 })
                 .catch(() => {});
@@ -96,38 +93,6 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
         } catch (e) {
             console.error('Logout error:', e);
             router.push('/login');
-        }
-    };
-
-    const handleSaveName = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsSavingName(true);
-        setNameError('');
-        setNameSuccess('');
-
-        try {
-            const res = await fetch('/api/auth/profile', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: nameInput })
-            });
-
-            const data = await res.json();
-            if (res.ok) {
-                setCurrentUser(prev => prev ? { ...prev, name: nameInput.trim() } : { name: nameInput.trim() });
-                setNameSuccess('Display name updated!');
-                router.refresh();
-                setTimeout(() => {
-                    setShowSettingsModal(false);
-                    setNameSuccess('');
-                }, 1200);
-            } else {
-                setNameError(data.error || 'Failed to update name');
-            }
-        } catch {
-            setNameError('An error occurred. Please try again.');
-        } finally {
-            setIsSavingName(false);
         }
     };
 
@@ -385,6 +350,7 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                                         type="button"
                                         onClick={() => {
                                             setProfileMenuOpen(false);
+                                            setInitialSettingsTab('profile');
                                             setShowSettingsModal(true);
                                         }}
                                         style={{
@@ -405,6 +371,34 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                                     >
                                         <Settings size={15} style={{ color: '#6B7280' }} />
                                         Account Settings
+                                    </button>
+
+                                    <button
+                                        role="menuitem"
+                                        type="button"
+                                        onClick={() => {
+                                            setProfileMenuOpen(false);
+                                            setInitialSettingsTab('password');
+                                            setShowSettingsModal(true);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            padding: '0.5rem 0.75rem',
+                                            fontSize: '0.875rem',
+                                            color: '#374151',
+                                            borderRadius: '8px',
+                                            textAlign: 'left',
+                                            cursor: 'pointer',
+                                            transition: 'background 0.1s ease'
+                                        }}
+                                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F9FAFB')}
+                                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                    >
+                                        <KeyRound size={15} style={{ color: '#6B7280' }} />
+                                        Change Password
                                     </button>
 
                                     <button
@@ -465,110 +459,16 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
                 )}
             </div>
 
-            {/* Profile Settings Modal */}
-            {showSettingsModal && (
-                <ModalPortal>
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="settings-modal-title"
-                        className="modal-overlay"
-                        onClick={(e) => {
-                            if (e.target === e.currentTarget) setShowSettingsModal(false);
-                        }}
-                    >
-                        <div
-                            className="modal-content"
-                            style={{
-                                maxWidth: '420px',
-                            }}
-                        >
-                            <button
-                                type="button"
-                                onClick={() => setShowSettingsModal(false)}
-                                aria-label="Close dialog"
-                                style={{
-                                    position: 'absolute',
-                                    top: '1.25rem',
-                                    right: '1.25rem',
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    color: '#6B7280',
-                                    padding: '4px'
-                                }}
-                            >
-                                <X size={20} />
-                            </button>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                                <UserIcon size={20} style={{ color: 'var(--accent-color)' }} />
-                                <h2 id="settings-modal-title" style={{ fontSize: '1.25rem', fontWeight: 600, color: '#1F2937', margin: 0 }}>
-                                    Account Settings
-                                </h2>
-                            </div>
-                            <p style={{ color: '#6B7280', marginBottom: '1.25rem', fontSize: '0.9rem' }}>
-                                Customize how your name appears on celebrations you create.
-                            </p>
-
-                            {nameError && (
-                                <div style={{ color: '#DC2626', backgroundColor: '#FEF2F2', border: '1px solid #FCA5A5', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem' }}>
-                                    {nameError}
-                                </div>
-                            )}
-                            {nameSuccess && (
-                                <div style={{ color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '0.65rem 0.85rem', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <CheckCircle2 size={16} /> {nameSuccess}
-                                </div>
-                            )}
-
-                            <form onSubmit={handleSaveName}>
-                                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-                                    <label className="form-label" htmlFor="profile-display-name" style={{ fontSize: '0.875rem', fontWeight: 500, color: '#374151', display: 'block', marginBottom: '6px' }}>
-                                        Display Name
-                                    </label>
-                                    <input
-                                        id="profile-display-name"
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Enter your name"
-                                        required
-                                        value={nameInput}
-                                        onChange={(e) => setNameInput(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px 12px',
-                                            borderRadius: '8px',
-                                            border: '1px solid #D1D5DB',
-                                            fontSize: '0.95rem'
-                                        }}
-                                    />
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowSettingsModal(false)}
-                                        className="btn btn-outline"
-                                        style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
-                                        disabled={isSavingName}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="btn btn-primary"
-                                        style={{ flex: 1, padding: '10px 14px', fontSize: '0.9rem', borderRadius: '10px' }}
-                                        disabled={isSavingName}
-                                    >
-                                        {isSavingName ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </ModalPortal>
-            )}
+            {/* Profile & Password Settings Modal */}
+            <AccountSettingsModal
+                isOpen={showSettingsModal}
+                onClose={() => setShowSettingsModal(false)}
+                user={currentUser}
+                onUserUpdate={(updated) => {
+                    setUserOverride(prev => ({ ...(prev || currentUser || { name: null, email: null }), name: updated.name }));
+                }}
+                initialTab={initialSettingsTab}
+            />
 
             {/* Mobile Navigation Drawer for Landing */}
             {isLanding && mobileMenuOpen && (

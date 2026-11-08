@@ -30,10 +30,11 @@ model Event {
 }
 
 model User {
-  id       String  @id @default(uuid())
+  id             String  @id @default(uuid())
   email          String  @unique
   password       String
   name           String?
+  tokenVersion   Int     @default(0)
   events         Event[] @relation("CreatedEvents")
   receivedEvents Event[] @relation("ReceivedEvents")
 }
@@ -50,4 +51,46 @@ model VideoMessage {
   storageProvider String?
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model AuthRateLimit {
+  key       String   @id
+  count     Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+}
+
+model MediaCleanupQueue {
+  id          String    @id @default(uuid())
+  url         String
+  eventId     String
+  mediaType   String    // "video" | "cover"
+  status      String    @default("PENDING") // "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED"
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  nextRetryAt DateTime  @default(now())
+  lastError   String?
+  lockedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, nextRetryAt])
+  @@index([eventId])
+}
+
+model UploadAuthorization {
+  id          String    @id @default(uuid())
+  eventId     String
+  uploadToken String    @unique
+  scopedPath  String    @unique
+  status      String    @default("PENDING") // "PENDING" | "CONSUMED" | "EXPIRED"
+  consumedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([eventId])
+  @@index([status, expiresAt])
 }

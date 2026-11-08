@@ -8,6 +8,7 @@ function LoginFlow() {
     const searchParams = useSearchParams();
     const redirectUrl = searchParams.get('redirect') || '/dashboard';
     
+    const isPasswordChanged = searchParams.get('changed') === 'true';
     const [isSignup, setIsSignup] = useState(false);
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
@@ -17,8 +18,17 @@ function LoginFlow() {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError('');
+
+        if (isSignup) {
+            const passwordBytes = new TextEncoder().encode(password).length;
+            if (passwordBytes > 72) {
+                setError('Your password is too long. Please shorten it. Some symbols and emoji count toward the limit more quickly.');
+                return;
+            }
+        }
+
+        setLoading(true);
 
         try {
             const res = await fetch('/api/auth/login', {
@@ -34,7 +44,7 @@ function LoginFlow() {
             } else {
                 setError(data.error || 'Failed to login');
             }
-        } catch (e) {
+        } catch {
             setError('An error occurred. Please try again.');
         } finally {
             setLoading(false);
@@ -47,6 +57,12 @@ function LoginFlow() {
             <p style={{ color: '#666', marginBottom: '2rem' }}>
                 Join or log in to access your JustCelebrateYou
             </p>
+
+            {isPasswordChanged && !error && (
+                <div style={{ color: '#16A34A', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', padding: '0.75rem', borderRadius: '8px', fontSize: '0.875rem', marginBottom: '1.25rem', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>Your password has been changed. Please sign in with your new password.</span>
+                </div>
+            )}
 
             <div style={{ display: 'flex', marginBottom: '1.5rem', borderBottom: '1px solid #eaeaea' }}>
                 <button 
@@ -74,6 +90,7 @@ function LoginFlow() {
                         <input
                             id="name"
                             type="text"
+                            autoComplete="name"
                             className="form-input"
                             placeholder="Enter your name"
                             required={isSignup}
@@ -88,6 +105,7 @@ function LoginFlow() {
                     <input
                         id="email"
                         type="email"
+                        autoComplete="username"
                         className="form-input"
                         placeholder="you@example.com"
                         required
@@ -100,6 +118,7 @@ function LoginFlow() {
                     <input
                         id="password"
                         type="password"
+                        autoComplete={isSignup ? 'new-password' : 'current-password'}
                         className="form-input"
                         placeholder="••••••••"
                         required

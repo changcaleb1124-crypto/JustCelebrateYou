@@ -1,5 +1,4 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { del } from '@vercel/blob';
 import { prisma } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
@@ -27,42 +26,81 @@ export const storage = {
      */
     async handleClientUpload(body: HandleUploadBody, request: Request) {
         try {
+            const token = process.env.STAGING_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
             const jsonResponse = await handleUpload({
                 body,
                 request,
+                token,
                 onBeforeGenerateToken: async (pathname, clientPayload) => {
-                    // Extract eventId from clientPayload if provided
                     let eventId = '';
+                    let uploadId = '';
+                    let uploadToken = '';
+
                     if (clientPayload) {
                         try {
                             const parsed = JSON.parse(clientPayload);
                             eventId = parsed.eventId;
+                            uploadId = parsed.uploadId;
+                            uploadToken = parsed.uploadToken;
                         } catch (e) {
                             console.error("Failed to parse client payload", e);
                         }
                     }
 
                     if (!eventId) {
-                        throw new Error('Event ID is required for upload token generation');
+                        throw new Error('Celebration ID is required for upload token generation');
                     }
 
-                    // Security Check: Verify event exists
+                    // Security Check: Verify celebration exists
                     const event = await prisma.event.findUnique({
                         where: { id: eventId },
                         select: { id: true }
                     });
 
                     if (!event) {
-                        throw new Error('Event not found');
+                        throw new Error('Celebration not found');
+                    }
+
+                    // If server authorization receipt was issued, strictly verify it
+                    if (uploadId && uploadToken) {
+                        const uploadAuth = await prisma.uploadAuthorization.findUnique({
+                            where: { id: uploadId }
+                        });
+
+                        if (!uploadAuth || uploadAuth.uploadToken !== uploadToken) {
+                            throw new Error('Unauthorized upload: Invalid or forged upload receipt');
+                        }
+
+                        if (uploadAuth.eventId !== eventId) {
+                            throw new Error('Unauthorized upload: Scope mismatch with celebration');
+                        }
+
+                        if (uploadAuth.status !== 'PENDING') {
+                            throw new Error('Unauthorized upload: Authorization receipt is not pending');
+                        }
+
+                        if (uploadAuth.expiresAt <= new Date()) {
+                            throw new Error('Unauthorized upload: Authorization receipt has expired');
+                        }
+
+                        if (pathname !== uploadAuth.scopedPath) {
+                            throw new Error('Unauthorized upload: Upload pathname does not match authorized scope');
+                        }
+                    } else {
+                        // Enforce that upload pathname is strictly scoped to this celebration
+                        if (!pathname.startsWith(`videos/${eventId}/`)) {
+                            throw new Error(`Invalid upload pathname: must be scoped to videos/${eventId}/`);
+                        }
                     }
 
                     return {
-                        allowedContentTypes: ['video/mp4', 'video/webm', 'video/quicktime'],
+                        allowedContentTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/*'],
                         maximumSizeInBytes: 50 * 1024 * 1024, // 50MB
-                        tokenPayload: JSON.stringify({ eventId })
+                        validUntil: Date.now() + 15 * 60 * 1000, // 15-minute token expiry
+                        tokenPayload: JSON.stringify({ eventId, uploadId })
                     };
                 },
-                onUploadCompleted: async ({ blob, tokenPayload }) => {
+                onUploadCompleted: async ({ blob }) => {
                     // We don't save the metadata here because the frontend needs to 
                     // submit the senderName which isn't part of the blob upload.
                     // We save it in the /api/messages route instead.
@@ -97,19 +135,16 @@ export const storage = {
     },
 
     /**
-     * Deletes a video from storage.
+     * Deletes a video from storage with strict celebration scoping.
      */
-    async deleteVideo(url: string) {
+    async deleteVideo(url: string, eventId?: string) {
         if (!url) return;
-        
-        // Basic check to see if it's a Vercel Blob URL
-        if (url.includes('public.blob.vercel-storage.com')) {
-            try {
-                await del(url);
-            } catch (error) {
-                console.error(`Failed to delete blob at ${url}:`, error);
-            }
-        }
+        const { deleteMediaObject } = await import('@/lib/media-cleanup');
+        return deleteMediaObject({
+            url,
+            eventId: eventId || '',
+            mediaType: 'video',
+        });
     },
 
     /**

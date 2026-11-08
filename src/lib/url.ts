@@ -37,25 +37,118 @@ function isProductionEnvironment(): boolean {
 }
 
 /**
+ * Resolves the host and protocol from an incoming HTTP Request.
+ * Safely handles proxy headers (x-forwarded-host, x-forwarded-port, x-forwarded-proto)
+ * and falls back to standard Host headers and req.url.
+ */
+function extractUrlFromRequest(req: Request): string | null {
+    try {
+        let host: string | null = null;
+        let proto: string | null = null;
+
+        if (req.headers && typeof req.headers.get === 'function') {
+            const hostHeader =
+                req.headers.get('x-forwarded-host') ||
+                req.headers.get('host');
+
+            if (hostHeader) {
+                // Header can be comma-separated list of proxies, take the first/original client host
+                host = hostHeader.split(',')[0].trim();
+            }
+
+            const portHeader = req.headers.get('x-forwarded-port');
+            if (host && portHeader && !host.includes(':')) {
+                const port = portHeader.split(',')[0].trim();
+                if (port !== '80' && port !== '443') {
+                    host = `${host}:${port}`;
+                }
+            }
+
+            const protoHeader = req.headers.get('x-forwarded-proto');
+            if (protoHeader) {
+                proto = protoHeader.split(',')[0].trim();
+            }
+        }
+
+        // Fallback to parsing req.url if host was not present in headers
+        if (!host && req.url) {
+            try {
+                const parsedUrl = new URL(req.url);
+                host = parsedUrl.host;
+                if (!proto && parsedUrl.protocol) {
+                    proto = parsedUrl.protocol.replace(':', '');
+                }
+            } catch {
+                // Ignore malformed URL
+            }
+        }
+
+        if (host) {
+            if (!proto) {
+                proto = (isLocalhost(host) || host.startsWith('192.168.') || host.startsWith('10.') || host.startsWith('172.'))
+                    ? 'http'
+                    : 'https';
+            }
+            return `${proto}://${host}`;
+        }
+    } catch {
+        // Safe fallback on any inspection failure
+    }
+    return null;
+}
+
+/**
  * Resolves the canonical base URL for the application.
  *
  * Rules:
- * 1. Checks NEXT_PUBLIC_APP_URL / APP_URL. In production, any localhost value is rejected.
- * 2. Checks incoming Request headers (x-forwarded-host / host, x-forwarded-proto).
- *    In production, any localhost host is rejected.
- * 3. Checks Vercel system variables (VERCEL_PROJECT_PRODUCTION_URL, VERCEL_URL).
+ *
+ * In Local Development:
+ * 1. Checks incoming Request headers (x-forwarded-host / host, req.url) so dynamic ports
+ *    (e.g. localhost:3001) and local network addresses are accurately reflected.
+ * 2. Checks browser window origin (window.location.origin) if executed client-side.
+ * 3. Checks NEXT_PUBLIC_APP_URL / APP_URL if no request or window context is available.
+ * 4. Development fallback: http://localhost:3000.
+ *
+ * In Production:
+ * 1. Checks NEXT_PUBLIC_APP_URL / APP_URL. Any localhost value is strictly rejected and warned.
+ * 2. Checks Vercel system variables (VERCEL_PROJECT_PRODUCTION_URL, VERCEL_URL for preview).
+ * 3. Checks incoming Request headers for non-localhost hosts if no canonical environment URL is set.
  * 4. Production fallback: ALWAYS https://justcelebrateyou.com (NEVER localhost in production).
- * 5. Development fallback: http://localhost:3000.
  */
 export function getBaseUrl(req?: Request): string {
     const isProd = isProductionEnvironment();
 
-    // 1. Explicit configured URL
+    if (!isProd) {
+        // --- Local Development Mode ---
+        // 1. Incoming request context (accurately reflects active port/host, e.g. localhost:3001)
+        if (req) {
+            const reqUrl = extractUrlFromRequest(req);
+            if (reqUrl) {
+                return reqUrl;
+            }
+        }
+
+        // 2. Browser client-side context
+        if (typeof window !== 'undefined' && window.location?.origin) {
+            return window.location.origin;
+        }
+
+        // 3. Configured environment URL (used for scripts/CLI/workers without req)
+        const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+        if (envUrl && envUrl.trim() !== '') {
+            return normalizeUrl(envUrl);
+        }
+
+        // 4. Default local development fallback
+        return LOCAL_DEV_FALLBACK;
+    }
+
+    // --- Production Mode ---
+    // 1. Explicit configured canonical URL (must not be localhost)
     const envUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
     if (envUrl && envUrl.trim() !== '') {
         const cleanEnvUrl = normalizeUrl(envUrl);
-        // If in production, ensure misconfigured localhost is not used
-        if (isProd && isLocalhost(cleanEnvUrl)) {
+        if (isLocalhost(cleanEnvUrl)) {
             console.warn(
                 `[url] NEXT_PUBLIC_APP_URL is set to localhost (${envUrl}) in production mode. Discarding to prevent invalid public links.`
             );
@@ -64,51 +157,32 @@ export function getBaseUrl(req?: Request): string {
         }
     }
 
-    // 2. Incoming request headers (when invoked from route handlers / middleware)
-    if (req) {
-        try {
-            const hostHeader =
-                req.headers.get('x-forwarded-host') ||
-                req.headers.get('host');
-
-            if (hostHeader) {
-                // Header can be comma-separated list of proxies, take the first/original client host
-                const host = hostHeader.split(',')[0].trim();
-                const protoHeader = req.headers.get('x-forwarded-proto');
-                const proto =
-                    (protoHeader ? protoHeader.split(',')[0].trim() : null) ||
-                    (isLocalhost(host) ? 'http' : 'https');
-
-                if (isProd && isLocalhost(host)) {
-                    // Ignore localhost host in production
-                } else if (host) {
-                    return `${proto}://${host}`;
-                }
-            }
-        } catch {
-            // Header read fallback
+    // 2. Vercel canonical production project domain
+    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+        const vercelProd = normalizeUrl(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
+        if (!isLocalhost(vercelProd)) {
+            return vercelProd;
         }
     }
 
-    // 3. Vercel system variables
-    if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-        return normalizeUrl(`https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`);
-    }
-
+    // 3. Vercel preview deployment URL (e.g. PR / branch preview)
     if (process.env.VERCEL_URL) {
         const vercelUrl = normalizeUrl(`https://${process.env.VERCEL_URL}`);
-        if (!isProd || !isLocalhost(vercelUrl)) {
+        if (!isLocalhost(vercelUrl)) {
             return vercelUrl;
         }
     }
 
-    // 4. Production fallback: never generate localhost links in production
-    if (isProd) {
-        return PRODUCTION_DOMAIN;
+    // 4. Incoming request headers in production (only if non-localhost)
+    if (req) {
+        const reqUrl = extractUrlFromRequest(req);
+        if (reqUrl && !isLocalhost(reqUrl)) {
+            return reqUrl;
+        }
     }
 
-    // 5. Local development fallback
-    return LOCAL_DEV_FALLBACK;
+    // 5. Ultimate production fallback: canonical live domain (never localhost)
+    return PRODUCTION_DOMAIN;
 }
 
 /**

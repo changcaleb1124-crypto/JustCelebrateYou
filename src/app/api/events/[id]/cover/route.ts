@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getCurrentUserId } from '@/lib/session';
-import { put, del } from '@vercel/blob';
+import { put, head } from '@vercel/blob';
+import { queueMediaCleanupInTx, processSingleCleanupTask } from '@/lib/media-cleanup';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -9,65 +10,10 @@ const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_SIZE = 4 * 1024 * 1024; // 4MB (comfortably within serverless 4.5MB limit)
 
 /**
- * Safely deletes a cover image from storage, strictly verifying
- * that the image URL belongs to this specific celebration's scoped storage path.
- */
-async function safelyDeleteOldCover(eventId: string, oldUrl: string | null) {
-    if (!oldUrl) return;
-
-    try {
-        // Vercel Blob deletion
-        if (oldUrl.includes('.public.blob.vercel-storage.com')) {
-            // Verify path scoping: must contain /covers/${eventId}/
-            if (oldUrl.includes(`/covers/${eventId}/`)) {
-                await del(oldUrl);
-            } else {
-                console.warn(`Attempted to delete blob outside celebration path: ${oldUrl}`);
-            }
-            return;
-        }
-
-        // Development-only local filesystem deletion
-        if (oldUrl.startsWith('/uploads/covers/cover-')) {
-            const fileName = oldUrl.replace('/uploads/covers/', '');
-            // Verify fileName starts with cover-${eventId}-
-            if (fileName.startsWith(`cover-${eventId}-`)) {
-                const filePath = path.join(process.cwd(), 'public', 'uploads', 'covers', fileName);
-                try {
-                    await fs.unlink(filePath);
-                } catch (e: unknown) {
-                    if ((e as { code?: string })?.code !== 'ENOENT') {
-                        console.error('Failed to unlink local dev cover file:', e);
-                    }
-                }
-            } else {
-                console.warn(`Attempted to delete local file outside celebration path: ${fileName}`);
-            }
-        }
-    } catch (err) {
-        console.error('Error during old cover deletion:', err);
-    }
-}
-
-/**
- * Extracts and returns the expected public Blob hostname scoped to our application's
- * configured BLOB_READ_WRITE_TOKEN store ID.
- */
-function getExpectedBlobHostname(): string | null {
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) return null;
-    const match = token.match(/^vercel_blob_rw_([a-zA-Z0-9]+)_/);
-    if (match && match[1]) {
-        return `${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
-    }
-    return null;
-}
-
-/**
  * POST /api/events/[id]/cover
  * Accepts either:
  * 1. multipart/form-data with a "file" field (supports Vercel Blob and dev-only filesystem)
- * 2. application/json with { coverUrl } uploaded via direct-to-Blob flow
+ * 2. application/json with { coverUrl } verified via official @vercel/blob head() SDK
  */
 export async function POST(
     req: Request,
@@ -105,7 +51,8 @@ export async function POST(
                 return NextResponse.json({ error: 'No image file provided' }, { status: 400 });
             }
 
-            if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+            const baseMime = file.type ? file.type.split(';')[0].trim().toLowerCase() : '';
+            if (!ALLOWED_MIME_TYPES.includes(baseMime)) {
                 return NextResponse.json({
                     error: 'Invalid file format. Please upload a JPG, PNG, or WebP image.'
                 }, { status: 400 });
@@ -117,15 +64,16 @@ export async function POST(
                 }, { status: 400 });
             }
 
-            const hasBlobToken = !!process.env.BLOB_READ_WRITE_TOKEN;
-            const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg';
+            const blobToken = process.env.STAGING_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+            const hasBlobToken = Boolean(blobToken);
+            const ext = baseMime === 'image/png' ? 'png' : baseMime === 'image/webp' ? 'webp' : 'jpg';
 
             if (hasBlobToken) {
                 // Production or Blob-configured environment: upload directly to Vercel Blob with scoped path
                 const blobPathname = `covers/${eventId}/${Date.now()}.${ext}`;
-                const blobResult = await put(blobPathname, file, { access: 'public' });
+                const blobResult = await put(blobPathname, file, { access: 'public', token: blobToken });
                 newCoverUrl = blobResult.url;
-            } else if (process.env.NODE_ENV === 'development') {
+            } else if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
                 // Development-only fallback when Blob token is unconfigured
                 const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'covers');
                 await fs.mkdir(uploadDir, { recursive: true });
@@ -135,7 +83,6 @@ export async function POST(
                 await fs.writeFile(filePath, Buffer.from(arrayBuffer));
                 newCoverUrl = `/uploads/covers/${fileName}`;
             } else {
-                // Production without blob storage configured: must not write to filesystem
                 return NextResponse.json({
                     error: 'Cloud storage is currently unconfigured in this environment.'
                 }, { status: 503 });
@@ -149,51 +96,87 @@ export async function POST(
                 return NextResponse.json({ error: 'Invalid cover URL' }, { status: 400 });
             }
 
+            const cleanCoverUrl = coverUrl.trim();
+
             let urlObj: URL;
             try {
-                urlObj = new URL(coverUrl);
+                urlObj = new URL(cleanCoverUrl);
             } catch {
                 return NextResponse.json({ error: 'Malformed cover URL' }, { status: 400 });
             }
 
-            // 1. Must use HTTPS
             if (urlObj.protocol !== 'https:') {
                 return NextResponse.json({ error: 'Invalid URL protocol: Must use HTTPS' }, { status: 400 });
             }
 
-            // 2. Verify exact Blob store ID matching this application's configured store
-            const expectedHostname = getExpectedBlobHostname();
-            if (!expectedHostname || urlObj.hostname.toLowerCase() !== expectedHostname) {
-                return NextResponse.json({
-                    error: 'Unauthorized cover URL: Image does not belong to this application’s authorized Blob store'
-                }, { status: 400 });
-            }
+            const blobToken = process.env.STAGING_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
+            const hasBlobToken = Boolean(blobToken);
+            if (hasBlobToken) {
+                // Use official SDK head() check: ensures object exists in our authorized Blob store
+                let blobMeta;
+                try {
+                    blobMeta = await head(cleanCoverUrl, blobToken ? { token: blobToken } : undefined);
+                } catch {
+                    return NextResponse.json({
+                        error: 'Unauthorized cover URL: Object does not exist in authorized cloud storage'
+                    }, { status: 400 });
+                }
 
-            // 3. Strictly verify that the path belongs to this celebration's scoped storage path
-            if (!urlObj.pathname.startsWith(`/covers/${eventId}/`)) {
-                return NextResponse.json({
-                    error: 'Unauthorized cover URL: Image does not belong to this celebration’s storage path'
-                }, { status: 400 });
-            }
+                // Strictly verify path belongs to this celebration
+                if (!blobMeta.pathname.startsWith(`covers/${eventId}/`)) {
+                    return NextResponse.json({
+                        error: 'Unauthorized cover URL: Image does not belong to this celebration’s storage path'
+                    }, { status: 400 });
+                }
 
-            newCoverUrl = coverUrl;
+                const baseCoverMime = blobMeta.contentType ? blobMeta.contentType.split(';')[0].trim().toLowerCase() : '';
+                if (!ALLOWED_MIME_TYPES.includes(baseCoverMime)) {
+                    return NextResponse.json({ error: 'Invalid cover image format' }, { status: 400 });
+                }
+
+                if (blobMeta.size > MAX_IMAGE_SIZE) {
+                    return NextResponse.json({ error: 'Image exceeds maximum allowed size of 4MB' }, { status: 400 });
+                }
+
+                newCoverUrl = blobMeta.url;
+            } else if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && cleanCoverUrl.startsWith('/uploads/covers/')) {
+                const fileName = cleanCoverUrl.replace('/uploads/covers/', '');
+                if (!fileName.startsWith(`cover-${eventId}-`)) {
+                    return NextResponse.json({
+                        error: 'Unauthorized cover URL: Local file does not belong to this celebration'
+                    }, { status: 400 });
+                }
+                newCoverUrl = cleanCoverUrl;
+            } else {
+                return NextResponse.json({ error: 'Unauthorized cover URL' }, { status: 400 });
+            }
         } else {
             return NextResponse.json({ error: 'Unsupported Content-Type' }, { status: 400 });
         }
 
-        // Save old cover URL for safe cleanup AFTER successful database update
+        // In one atomic transaction:
+        // Record cleanup task for previous cover (if different) and update event coverUrl
         const oldCoverUrl = event.coverUrl;
+        let cleanupTaskId: string | null = null;
+        const updatedEvent = await prisma.$transaction(async (tx) => {
+            if (oldCoverUrl && oldCoverUrl !== newCoverUrl) {
+                cleanupTaskId = await queueMediaCleanupInTx(tx, {
+                    url: oldCoverUrl,
+                    eventId,
+                    mediaType: 'cover',
+                });
+            }
 
-        // Update database with the new cover URL
-        const updatedEvent = await prisma.event.update({
-            where: { id: eventId },
-            data: { coverUrl: newCoverUrl },
-            select: { id: true, coverUrl: true, occasion: true }
+            return tx.event.update({
+                where: { id: eventId },
+                data: { coverUrl: newCoverUrl },
+                select: { id: true, coverUrl: true, occasion: true }
+            });
         });
 
-        // Safely delete previous cover file only after database write succeeds
-        if (oldCoverUrl && oldCoverUrl !== newCoverUrl) {
-            await safelyDeleteOldCover(eventId, oldCoverUrl);
+        // Post-commit immediate processing of queued cleanup task
+        if (cleanupTaskId) {
+            await processSingleCleanupTask(cleanupTaskId);
         }
 
         return NextResponse.json({
@@ -237,15 +220,27 @@ export async function DELETE(
 
         const oldCoverUrl = event.coverUrl;
 
-        // Reset database field to null
-        await prisma.event.update({
-            where: { id: eventId },
-            data: { coverUrl: null }
+        // In one atomic transaction:
+        // Record cleanup task for current cover and set event.coverUrl to null
+        let cleanupTaskId: string | null = null;
+        await prisma.$transaction(async (tx) => {
+            if (oldCoverUrl) {
+                cleanupTaskId = await queueMediaCleanupInTx(tx, {
+                    url: oldCoverUrl,
+                    eventId,
+                    mediaType: 'cover',
+                });
+            }
+
+            await tx.event.update({
+                where: { id: eventId },
+                data: { coverUrl: null }
+            });
         });
 
-        // Clean up old file from storage
-        if (oldCoverUrl) {
-            await safelyDeleteOldCover(eventId, oldCoverUrl);
+        // Post-commit immediate processing
+        if (cleanupTaskId) {
+            await processSingleCleanupTask(cleanupTaskId);
         }
 
         return NextResponse.json({ success: true, message: 'Cover image removed' });
