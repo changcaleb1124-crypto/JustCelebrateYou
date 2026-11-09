@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Video, Square, Loader2, X, AlertCircle, Shield } from 'lucide-react';
+import { Video, Square, Loader2, X, AlertCircle, Shield, Info } from 'lucide-react';
 import { storageClient } from '@/lib/storage-client';
 import { fixWebmDuration } from '@/lib/webm-duration';
 import { inspectMediaBlob, MediaInspectionResult } from '@/lib/media-inspector';
@@ -523,6 +523,27 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
                                 }}
                                 autoFocus
                             />
+
+                            <div
+                                style={{
+                                    marginTop: '0.85rem',
+                                    marginBottom: '0.25rem',
+                                    padding: '0.65rem 0.85rem',
+                                    backgroundColor: '#F9FAFB',
+                                    border: '1px solid #E5E7EB',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '8px',
+                                    fontSize: '0.8125rem',
+                                    lineHeight: '1.45',
+                                    color: '#4B5563',
+                                    textAlign: 'left'
+                                }}
+                            >
+                                <Info size={16} style={{ color: '#6B7280', flexShrink: 0, marginTop: '2px' }} aria-hidden="true" />
+                                <span>Anyone with the celebration link can watch your video. If someone shares the video’s direct link, others can watch it too.</span>
+                            </div>
 
                             <div className="flex gap-4 mt-4">
                                 <button
