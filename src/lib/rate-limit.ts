@@ -91,7 +91,8 @@ export async function checkRateLimit(
 
         return { allowed: true };
     } catch (e) {
-        console.error('Rate limit check error:', (e as Error)?.message || 'Database error');
+        const code = (e as { code?: string })?.code;
+        console.error('Rate limit check error:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'DB_ERROR');
         // Fail open for transient DB error so user is not locked out of service
         return { allowed: true };
     }
@@ -130,7 +131,8 @@ export async function recordFailedAttempt(
             }).catch(() => {});
         }
     } catch (e) {
-        console.error('Failed to record rate limit attempt:', (e as Error)?.message || 'Database error');
+        const code = (e as { code?: string })?.code;
+        console.error('Failed to record rate limit attempt:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'DB_ERROR');
     }
 }
 

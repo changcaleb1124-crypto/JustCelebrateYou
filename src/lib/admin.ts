@@ -40,8 +40,8 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 
         // Check against verified server-only allowlist
         return adminIds.has(userId.toLowerCase());
-    } catch (err) {
-        console.error('Error verifying admin authorization:', err);
+    } catch {
+        console.error('Error verifying admin authorization: ADMIN_AUTH_CHECK_FAILED');
         return false;
     }
 }

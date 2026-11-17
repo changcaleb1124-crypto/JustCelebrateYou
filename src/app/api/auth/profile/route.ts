@@ -16,7 +16,8 @@ export async function GET() {
 
         return NextResponse.json({ user: user || null });
     } catch (e: unknown) {
-        console.error('Profile fetch error:', e);
+        const code = (e as { code?: string })?.code;
+        console.error('Profile fetch error:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ user: null });
     }
 }
@@ -40,10 +41,10 @@ export async function PUT(req: Request) {
 
         return NextResponse.json({ success: true, user: { id: user.id, name: user.name } });
     } catch (e: unknown) {
-        console.error('Profile update error:', e);
-        const message = (e as Error)?.message;
+        const code = (e as { code?: string })?.code;
+        console.error('Profile update error:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ 
-            error: message ? `Server Error: ${message}` : 'An unexpected server error occurred.' 
+            error: 'An unexpected server error occurred.' 
         }, { status: 500 });
     }
 }

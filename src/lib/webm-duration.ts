@@ -161,8 +161,8 @@ export async function fixWebmDuration(blob: Blob, durationMs: number): Promise<B
         result.set(bytes.subarray(infoPayloadEnd), offset);
 
         return new Blob([result], { type: blob.type || 'video/webm' });
-    } catch (err) {
-        console.warn('Failed to patch WebM duration:', err);
+    } catch {
+        console.warn('Failed to patch WebM duration: WEBM_DURATION_PATCH_FAILED');
         return blob;
     }
 }

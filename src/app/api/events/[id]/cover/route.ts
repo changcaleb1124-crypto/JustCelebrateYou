@@ -184,8 +184,9 @@ export async function POST(
             coverUrl: updatedEvent.coverUrl
         });
     } catch (error: unknown) {
-        console.error('Error updating cover image:', error);
-        return NextResponse.json({ error: (error as Error).message || 'Internal Server Error' }, { status: 500 });
+        const code = (error as { code?: string })?.code;
+        console.error('Error updating cover image:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
 
@@ -245,7 +246,8 @@ export async function DELETE(
 
         return NextResponse.json({ success: true, message: 'Cover image removed' });
     } catch (error: unknown) {
-        console.error('Error removing cover image:', error);
-        return NextResponse.json({ error: (error as Error).message || 'Internal Server Error' }, { status: 500 });
+        const code = (error as { code?: string })?.code;
+        console.error('Error removing cover image:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

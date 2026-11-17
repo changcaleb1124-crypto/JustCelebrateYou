@@ -42,8 +42,8 @@ export const storage = {
                             eventId = parsed.eventId;
                             uploadId = parsed.uploadId;
                             uploadToken = parsed.uploadToken;
-                        } catch (e) {
-                            console.error("Failed to parse client payload", e);
+                        } catch {
+                            console.error('Failed to parse client payload: INVALID_JSON');
                         }
                     }
 
@@ -104,7 +104,10 @@ export const storage = {
                     // We don't save the metadata here because the frontend needs to 
                     // submit the senderName which isn't part of the blob upload.
                     // We save it in the /api/messages route instead.
-                    console.log('Upload completed:', blob.url);
+                    console.log('[storage] Upload completed:', {
+                        contentType: blob.contentType,
+                        hasPathname: Boolean(blob.pathname),
+                    });
                 },
             });
 

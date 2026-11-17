@@ -14,15 +14,15 @@ export default async function DashboardPage() {
             events: {
                 include: {
                     _count: { select: { messages: true } },
-                    recipientUser: { select: { id: true, name: true, email: true } },
+                    recipientUser: { select: { name: true } },
                 },
                 orderBy: { createdAt: 'desc' },
             },
             receivedEvents: {
                 include: {
                     _count: { select: { messages: true } },
-                    user: { select: { id: true, name: true, email: true } },
-                    recipientUser: { select: { id: true, name: true, email: true } },
+                    user: { select: { name: true } },
+                    recipientUser: { select: { name: true } },
                 },
                 orderBy: { createdAt: 'desc' },
             },

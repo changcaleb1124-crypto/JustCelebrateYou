@@ -50,8 +50,8 @@ export async function DELETE(
         if (queuedTaskId) {
             try {
                 await processSingleCleanupTask(queuedTaskId);
-            } catch (err) {
-                console.warn(`[messages] Post-commit cleanup deferred to retry processor: ${(err as Error)?.message}`);
+            } catch {
+                console.warn('[messages] Post-commit cleanup deferred to retry processor');
             }
         }
 
@@ -67,7 +67,8 @@ export async function DELETE(
                 { status: 403 }
             );
         }
-        console.error('Error deleting message:', msg || 'Unknown error');
+        const code = (error as { code?: string })?.code;
+        console.error('Error deleting message:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

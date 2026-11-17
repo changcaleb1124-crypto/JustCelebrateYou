@@ -33,8 +33,9 @@ async function handleClaimLink(req: Request, { params }: { params: Promise<{ id:
         const claimUrl = getClaimUrl(token, req);
         return NextResponse.json({ claimToken: token, claimUrl });
     } catch (e: unknown) {
-        console.error('Error generating claim link:', e);
-        return NextResponse.json({ error: (e as Error).message || 'Internal server error' }, { status: 500 });
+        const code = (e as { code?: string })?.code;
+        console.error('Error generating claim link:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }
 

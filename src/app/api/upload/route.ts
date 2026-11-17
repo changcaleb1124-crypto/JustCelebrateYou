@@ -8,7 +8,8 @@ export async function POST(request: Request) {
         // and includes security checks to verify the event exists.
         return await storage.handleClientUpload(body, request);
     } catch (error) {
-        console.error('Error generating upload token:', error);
+        const code = (error as { code?: string })?.code;
+        console.error('Error generating upload token:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'UPLOAD_TOKEN_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

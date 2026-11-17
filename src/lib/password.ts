@@ -97,10 +97,11 @@ export async function verifyAndUpgradePassword(
                 });
             } catch (err) {
                 // Log generic migration warning without exposing any credentials
-                console.error('Password hash upgrade failed for user', userId, err);
+                const code = (err as { code?: string })?.code;
+                console.error('Password hash upgrade failed:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'HASH_UPGRADE_FAILED');
             }
         } else {
-            console.warn(`Cannot migrate legacy password for user ${userId}: exceeds 72-byte limit (${byteLength} bytes)`);
+            console.warn(`Cannot migrate legacy password: exceeds 72-byte limit (${byteLength} bytes)`);
         }
     }
 

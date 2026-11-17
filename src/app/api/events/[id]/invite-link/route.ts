@@ -45,7 +45,8 @@ async function handleInviteLink(
             recipient: event.recipient
         });
     } catch (error: unknown) {
-        console.error('Error generating invite link:', error);
+        const code = (error as { code?: string })?.code;
+        console.error('Error generating invite link:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

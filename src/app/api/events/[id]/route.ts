@@ -32,7 +32,8 @@ export async function GET(
 
         return NextResponse.json(sanitizedEvent);
     } catch (error) {
-        console.error('Error fetching event:', error);
+        const code = (error as { code?: string })?.code;
+        console.error('Error fetching event:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -71,7 +72,8 @@ export async function PATCH(
 
         return NextResponse.json({ success: true, event: updated });
     } catch (error) {
-        console.error('Error updating event:', error);
+        const code = (error as { code?: string })?.code;
+        console.error('Error updating event:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -155,7 +157,8 @@ export async function DELETE(
         if (msg === 'FORBIDDEN') {
             return NextResponse.json({ error: 'Forbidden: Only the creator can delete this celebration' }, { status: 403 });
         }
-        console.error('Error deleting celebration:', msg);
+        const code = (error as { code?: string })?.code;
+        console.error('Error deleting celebration:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

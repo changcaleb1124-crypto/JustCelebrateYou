@@ -174,7 +174,8 @@ export async function POST(req: Request) {
             user: { id: user.id, email: user.email, name: user.name }
         });
     } catch (error) {
-        console.error('Login error:', (error as Error)?.message || 'Unknown error');
+        const code = (error as { code?: string })?.code;
+        console.error('Login error:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

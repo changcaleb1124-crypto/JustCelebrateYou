@@ -69,7 +69,8 @@ export async function POST(req: Request) {
                     }
                 });
             } catch (queueErr) {
-                console.warn('[messages] Failed to queue cleanup for deleted event video:', queueErr);
+                const code = (queueErr as { code?: string })?.code;
+                console.warn('[messages] Failed to queue cleanup for deleted event video:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'QUEUE_ERROR');
             }
             return NextResponse.json({ error: 'Celebration not found' }, { status: 404 });
         }
@@ -152,8 +153,8 @@ export async function POST(req: Request) {
             const blobToken = process.env.STAGING_BLOB_READ_WRITE_TOKEN || process.env.BLOB_READ_WRITE_TOKEN;
             try {
                 blobMeta = await head(cleanVideoUrl, blobToken ? { token: blobToken } : undefined);
-            } catch (headErr) {
-                console.warn('[messages] Storage verification failed for videoUrl:', (headErr as Error)?.message || 'Head error');
+            } catch {
+                console.warn('[messages] Storage verification failed for videoUrl:BLOB_HEAD_FAILED');
                 return NextResponse.json({
                     error: 'Invalid video URL: Object does not exist in authorized cloud storage.'
                 }, { status: 400 });
@@ -295,14 +296,16 @@ export async function POST(req: Request) {
                         }
                     });
                 } catch (queueErr) {
-                    console.warn('[messages] Failed to queue cleanup for raced event video:', queueErr);
+                    const code = (queueErr as { code?: string })?.code;
+                    console.warn('[messages] Failed to queue cleanup for raced event video:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'QUEUE_ERROR');
                 }
                 return NextResponse.json({ error: 'Celebration not found: Celebration was deleted' }, { status: 404 });
             }
             throw txErr;
         }
     } catch (error) {
-        console.error('Error saving video message metadata:', (error as Error)?.message || 'Unknown error');
+        const code = (error as { code?: string })?.code;
+        console.error('Error saving video message metadata:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

@@ -29,7 +29,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true, eventId: event.id });
     } catch (e) {
-        console.error('Error claiming event:', e);
+        const code = (e as { code?: string })?.code;
+        console.error('Error claiming event:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -81,15 +81,15 @@ export default function CreateCelebrationPage() {
                         method: 'POST',
                         body: uploadData,
                     });
-                } catch (coverErr) {
-                    console.error('Optional cover upload error:', coverErr);
+                } catch {
+                    console.error('Optional cover upload error: COVER_UPLOAD_FAILED');
                     // Non-blocking: celebration is created even if image upload encountered an issue
                 }
             }
 
             router.push(`/event/${data.id}?created=true`);
         } catch (e: unknown) {
-            console.error(e);
+            console.error('Create celebration error: CREATE_EVENT_FAILED');
             alert((e as Error).message || 'Failed to create celebration');
         } finally {
             setLoading(false);

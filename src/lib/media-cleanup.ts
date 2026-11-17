@@ -57,7 +57,7 @@ export async function deleteMediaObjectFromStorage({
             // Strict celebration scoping
             if (!pathname.startsWith(expectedPrefix)) {
                 console.warn(
-                    `[media-cleanup] Scope rejection: Blob path '${pathname}' does not match expected celebration prefix '${expectedPrefix}'`
+                    `[media-cleanup] Scope rejection: Blob path does not match expected celebration prefix '${expectedPrefix}'`
                 );
                 return {
                     success: false,
@@ -94,13 +94,13 @@ export async function deleteMediaObjectFromStorage({
             const fileName = cleanUrl.replace(`/uploads/${subDir}/`, '');
 
             if (!isSafeFileName(fileName)) {
-                console.warn(`[media-cleanup] Potential path traversal detected in file name: '${fileName}'`);
+                console.warn(`[media-cleanup] Potential path traversal detected in file name for celebration ${eventId}`);
                 return { success: false, error: 'Invalid file name' };
             }
 
             if (!fileName.startsWith(expectedFilePrefix)) {
                 console.warn(
-                    `[media-cleanup] Scope rejection: Local file '${fileName}' does not match prefix '${expectedFilePrefix}'`
+                    `[media-cleanup] Scope rejection: Local file does not match prefix '${expectedFilePrefix}'`
                 );
                 return { success: false, error: 'Scope mismatch: file does not belong to this celebration' };
             }
@@ -130,11 +130,16 @@ export async function deleteMediaObjectFromStorage({
         // External or unmanaged URL: skip without error
         return { success: true, skipped: true };
     } catch (err: unknown) {
-        const errorMsg = (err as Error)?.message || 'Unknown storage deletion error';
+        const rawMsg = (err as Error)?.message || '';
+        const safeCode = rawMsg.includes('timed out')
+            ? 'STORAGE_TIMEOUT'
+            : rawMsg.includes('403') || rawMsg.includes('Forbidden')
+            ? 'STORAGE_FORBIDDEN'
+            : 'STORAGE_DELETE_FAILED';
         console.error(
-            `[media-cleanup] Failed to delete ${mediaType} for celebration ${eventId}: ${errorMsg}`
+            `[media-cleanup] Failed to delete ${mediaType} for celebration ${eventId}: ${safeCode}`
         );
-        return { success: false, error: errorMsg };
+        return { success: false, error: safeCode };
     }
 }
 
@@ -209,7 +214,11 @@ export async function processSingleCleanupTask(taskId: string): Promise<void> {
             });
         }
     } catch (e) {
-        console.error(`[media-cleanup] Unexpected error in processSingleCleanupTask (${taskId}):`, (e as Error)?.message);
+        const code = (e as { code?: string })?.code;
+        console.error(
+            `[media-cleanup] Unexpected error in processSingleCleanupTask (${taskId}):`,
+            typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'TASK_PROCESSING_ERROR'
+        );
     }
 }
 

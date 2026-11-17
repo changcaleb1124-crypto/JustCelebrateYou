@@ -67,7 +67,7 @@ export const storageClient = {
                 uploadToken,
             };
         } catch (error) {
-            console.error('Error in storageClient.uploadVideo:', error);
+            console.error('Error in storageClient.uploadVideo: UPLOAD_CLIENT_FAILED');
             throw error;
         }
     }

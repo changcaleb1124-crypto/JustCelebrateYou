@@ -7,8 +7,8 @@ export async function GET() {
     try {
         const isAdmin = await isCurrentUserAdmin();
         return NextResponse.json({ isAdmin });
-    } catch (err) {
-        console.error('Failed to get admin status:', err);
+    } catch {
+        console.error('Failed to get admin status: ADMIN_STATUS_ERROR');
         return NextResponse.json({ isAdmin: false }, { status: 500 });
     }
 }

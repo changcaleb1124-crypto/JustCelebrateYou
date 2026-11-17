@@ -35,8 +35,8 @@ export type EventPreview = {
     recipientUserId: string | null;
     claimToken: string | null;
     _count: { messages: number };
-    recipientUser?: { id: string; name: string | null; email: string | null } | null;
-    user?: { id: string; name: string | null; email: string | null } | null;
+    recipientUser?: { name: string | null } | null;
+    user?: { name: string | null } | null;
 };
 
 interface DashboardClientProps {
@@ -152,8 +152,8 @@ export default function DashboardClient({
             } else {
                 alert(data.error || 'Only the project creator can retrieve the contributor invite link.');
             }
-        } catch (e) {
-            console.error('Error retrieving invite link:', e);
+        } catch {
+            console.error('Error retrieving invite link: INVITE_LINK_FETCH_FAILED');
             alert('Failed to retrieve invite link. Please try again.');
         } finally {
             setLoadingInviteId(null);
@@ -185,8 +185,8 @@ export default function DashboardClient({
             } else {
                 alert(data.error || 'Failed to generate gifting link');
             }
-        } catch (e) {
-            console.error('Error generating gift link:', e);
+        } catch {
+            console.error('Error generating gift link: CLAIM_LINK_FETCH_FAILED');
             alert('An error occurred. Please try again.');
         } finally {
             setGeneratingGiftId(null);
@@ -209,8 +209,8 @@ export default function DashboardClient({
                 const data = await res.json();
                 alert(data.error || 'Failed to delete celebration');
             }
-        } catch (e) {
-            console.error('Delete error:', e);
+        } catch {
+            console.error('Delete error: DELETE_EVENT_FAILED');
             alert('Failed to delete celebration');
         } finally {
             setIsDeleting(false);

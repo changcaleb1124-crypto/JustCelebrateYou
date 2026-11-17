@@ -107,7 +107,7 @@ export default function CoverUploadModal({
             onCoverUpdated(data.coverUrl);
             onClose();
         } catch (err: unknown) {
-            console.error('Cover upload error:', err);
+            console.error('Cover upload error: COVER_UPLOAD_FAILED');
             setErrorMsg((err as Error).message || 'An error occurred while uploading. Please try again.');
         } finally {
             setIsSaving(false);
@@ -146,7 +146,7 @@ export default function CoverUploadModal({
             onCoverUpdated(null);
             onClose();
         } catch (err: unknown) {
-            console.error('Cover removal error:', err);
+            console.error('Cover removal error: COVER_REMOVAL_FAILED');
             setErrorMsg((err as Error).message || 'Failed to remove cover');
         } finally {
             setIsRemoving(false);

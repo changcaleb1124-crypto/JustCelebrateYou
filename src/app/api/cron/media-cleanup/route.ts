@@ -75,7 +75,8 @@ async function handleCleanup(req: Request) {
             timestamp: new Date().toISOString(),
         });
     } catch (error: unknown) {
-        console.error('[cron/media-cleanup] Error during media cleanup processing:', (error as Error)?.message || 'Unknown error');
+        const code = (error as { code?: string })?.code;
+        console.error('[cron/media-cleanup] Error during media cleanup processing:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'CLEANUP_WORKER_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

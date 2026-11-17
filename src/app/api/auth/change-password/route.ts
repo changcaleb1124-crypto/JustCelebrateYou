@@ -110,7 +110,8 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         // Never log passwords, tokens, or hashes
-        console.error('Password change error:', (error as Error)?.message || 'Unknown error');
+        const code = (error as { code?: string })?.code;
+        console.error('Password change error:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'An unexpected error occurred while changing password. Please try again.' }, { status: 500 });
     }
 }

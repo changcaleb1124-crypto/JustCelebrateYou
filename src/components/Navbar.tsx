@@ -90,8 +90,8 @@ export default function Navbar({ isLanding = false, user: initialUser }: NavbarP
         try {
             await fetch('/api/auth/logout', { method: 'POST' });
             window.location.href = '/login';
-        } catch (e) {
-            console.error('Logout error:', e);
+        } catch {
+            console.error('Logout error: LOGOUT_FAILED');
             router.push('/login');
         }
     };

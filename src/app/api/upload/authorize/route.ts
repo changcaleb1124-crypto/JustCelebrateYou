@@ -90,7 +90,8 @@ export async function POST(req: Request) {
             expiresAt: expiresAt.toISOString(),
         }, { status: 201 });
     } catch (error) {
-        console.error('Error generating upload authorization:', (error as Error)?.message || 'Unknown error');
+        const code = (error as { code?: string })?.code;
+        console.error('Error generating upload authorization:', typeof code === 'string' && /^P\d{4}$/.test(code) ? code : 'INTERNAL_ERROR');
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

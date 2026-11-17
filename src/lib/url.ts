@@ -150,7 +150,7 @@ export function getBaseUrl(req?: Request): string {
         const cleanEnvUrl = normalizeUrl(envUrl);
         if (isLocalhost(cleanEnvUrl)) {
             console.warn(
-                `[url] NEXT_PUBLIC_APP_URL is set to localhost (${envUrl}) in production mode. Discarding to prevent invalid public links.`
+                '[url] NEXT_PUBLIC_APP_URL is set to localhost in production mode. Discarding to prevent invalid public links.'
             );
         } else {
             return cleanEnvUrl;

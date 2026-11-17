@@ -82,8 +82,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
                     setIsAdmin(true);
                 }
             })
-            .catch(err => {
-                console.error('Failed to verify admin status:', err);
+            .catch(() => {
+                console.error('Failed to verify admin status: ADMIN_CHECK_FAILED');
             });
         return () => { active = false; };
     }, []);
@@ -125,8 +125,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
                         videoRef.current.srcObject = stream;
                     }
                 })
-                .catch(err => {
-                    console.error("Error accessing media devices.", err);
+                .catch(() => {
+                    console.error("Error accessing media devices: MEDIA_DEVICE_ACCESS_DENIED");
                     setErrorMessage("Camera and microphone access is required to record a message.");
                 });
         }
@@ -225,8 +225,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
             let finalBlob: Blob = rawBlob;
             try {
                 finalBlob = await fixWebmDuration(rawBlob, elapsedMs);
-            } catch (patchErr) {
-                console.warn("[RECORDER] WebM duration patch skipped/failed:", patchErr);
+            } catch {
+                console.warn("[RECORDER] WebM duration patch skipped/failed: WEBM_DURATION_PATCH_FAILED");
             }
 
             setRecordedBlob(finalBlob);
@@ -281,8 +281,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
                         win.__testReports = win.__testReports || [];
                         win.__testReports.push(report);
                     }
-                } catch (err) {
-                    console.error("[RECORDER_DIAG] Analysis failed:", err);
+                } catch {
+                    console.error("[RECORDER_DIAG] Analysis failed: DIAGNOSTIC_ANALYSIS_ERROR");
                 } finally {
                     setIsAnalyzing(false);
                 }
@@ -333,8 +333,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
             if (mediaRecorderRef.current.state === 'recording') {
                 try {
                     mediaRecorderRef.current.requestData();
-                } catch (e) {
-                    console.warn("requestData error:", e);
+                } catch {
+                    console.warn("requestData error: REQUEST_DATA_FAILED");
                 }
             }
             mediaRecorderRef.current.stop();
@@ -414,8 +414,8 @@ export default function VideoRecorder({ eventId, initialFile, onSuccess, onCance
                 const errorData = await res.json();
                 setErrorMessage(errorData.error || "Failed to save message metadata.");
             }
-        } catch (e) {
-            console.error("Upload process failed:", e);
+        } catch {
+            console.error("Upload process failed: UPLOAD_SUBMISSION_ERROR");
             setErrorMessage("An error occurred while uploading. Please try again.");
         } finally {
             setIsUploading(false);

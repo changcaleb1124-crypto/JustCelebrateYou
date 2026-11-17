@@ -59,8 +59,8 @@ export default function MemoryPageClient({
             } else {
                 alert(data.error || 'Only the project creator can retrieve the contributor invite link.');
             }
-        } catch (e) {
-            console.error('Error fetching invite link:', e);
+        } catch {
+            console.error('Error fetching invite link: INVITE_LINK_FETCH_FAILED');
             alert('Failed to retrieve invite link.');
         }
     };
@@ -118,8 +118,8 @@ export default function MemoryPageClient({
                 const data = await res.json();
                 setMessages(data.messages);
             }
-        } catch (e) {
-            console.error(e);
+        } catch {
+            console.error('Error refreshing messages: REFRESH_MESSAGES_FAILED');
         }
     };
 
@@ -135,8 +135,8 @@ export default function MemoryPageClient({
             } else {
                 alert('Failed to delete message');
             }
-        } catch (e) {
-            console.error(e);
+        } catch {
+            console.error('Error deleting message: DELETE_MESSAGE_FAILED');
             alert('An error occurred');
         }
     };
