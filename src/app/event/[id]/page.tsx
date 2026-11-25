@@ -13,6 +13,9 @@ export default async function CelebrationPage(props: { params: Promise<{ id: str
     const event = await prisma.event.findUnique({
         where: { id },
         include: {
+            recipientUser: {
+                select: { name: true }
+            },
             messages: {
                 orderBy: { createdAt: 'desc' }
             }

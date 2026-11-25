@@ -4,7 +4,13 @@ import DashboardClient, { type EventPreview } from './DashboardClient';
 import Navbar from '@/components/Navbar';
 import { getCurrentUserId } from '@/lib/session';
 
-export default async function DashboardPage() {
+export default async function DashboardPage(props: {
+    searchParams?: Promise<{ tab?: string; claimed?: string }>;
+}) {
+    const searchParams = props.searchParams ? await props.searchParams : {};
+    const initialTab = searchParams?.tab === 'saved' ? 'saved' : 'created';
+    const justClaimed = searchParams?.claimed === 'true';
+
     const userId = await getCurrentUserId();
     if (!userId) redirect('/login');
 
@@ -39,6 +45,8 @@ export default async function DashboardPage() {
                     user={{ id: user.id, name: user.name, email: user.email }}
                     createdEvents={user.events as unknown as EventPreview[]}
                     savedEvents={user.receivedEvents as unknown as EventPreview[]}
+                    initialTab={initialTab}
+                    justClaimed={justClaimed}
                 />
             </main>
         </div>

@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Video, Copy, CheckCircle2, Trash2, Upload, Camera, AlertCircle } from 'lucide-react';
+import { Video, CheckCircle2, Trash2, Upload, Camera, AlertCircle, UserPlus, Gift } from 'lucide-react';
 import VideoRecorder from '@/components/VideoRecorder';
 import CelebrationCover from '@/components/CelebrationCover';
 import CoverUploadModal from '@/components/CoverUploadModal';
-import { copyToClipboard } from '@/lib/url';
+import ShareCelebrationModal from '@/components/ShareCelebrationModal';
 
 type Message = {
     id: string;
@@ -24,6 +24,7 @@ type EventData = {
     claimToken: string | null;
     userId?: string | null;
     recipientUserId: string | null;
+    recipientUser?: { name: string | null } | null;
     messages: Message[];
 };
 
@@ -40,28 +41,42 @@ export default function MemoryPageClient({
     const [showRecorder, setShowRecorder] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [loadingInvite, setLoadingInvite] = useState(false);
     const [generatingLink, setGeneratingLink] = useState(false);
-    const [claimLink, setClaimLink] = useState('');
+    const [shareModal, setShareModal] = useState<{
+        isOpen: boolean;
+        type: 'contributor' | 'recipient';
+        url: string;
+    }>({
+        isOpen: false,
+        type: 'contributor',
+        url: '',
+    });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Strictly determine if the logged-in user is the project creator
     const isCreator = Boolean(currentUserId && event.userId && currentUserId === event.userId);
+    const savedRecipientDisplayName = event.recipientUser?.name?.trim() || event.recipient;
 
-    const handleCopyLink = async () => {
+    const handleOpenInviteModal = async () => {
+        setLoadingInvite(true);
         try {
             const res = await fetch(`/api/events/${event.id}/invite-link`, { method: 'POST' });
             const data = await res.json();
             if (res.ok && data.inviteUrl) {
-                await copyToClipboard(data.inviteUrl);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
+                setShareModal({
+                    isOpen: true,
+                    type: 'contributor',
+                    url: data.inviteUrl,
+                });
             } else {
                 alert(data.error || 'Only the project creator can retrieve the contributor invite link.');
             }
         } catch {
             console.error('Error fetching invite link: INVITE_LINK_FETCH_FAILED');
             alert('Failed to retrieve invite link.');
+        } finally {
+            setLoadingInvite(false);
         }
     };
 
@@ -94,18 +109,22 @@ export default function MemoryPageClient({
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
-    const handleGenerateClaimLink = async () => {
+    const handleOpenRecipientShareModal = async () => {
         setGeneratingLink(true);
         try {
             const res = await fetch(`/api/events/${event.id}/claim-link`, { method: 'POST' });
             const data = await res.json();
-            if (data.claimUrl) {
-                setClaimLink(data.claimUrl);
+            if (res.ok && data.claimUrl) {
+                setShareModal({
+                    isOpen: true,
+                    type: 'recipient',
+                    url: data.claimUrl,
+                });
             } else {
-                alert(data.error || 'Failed to generate link');
+                alert(data.error || 'Failed to generate recipient link');
             }
         } catch {
-            alert('Error generating link');
+            alert('Error generating recipient link');
         } finally {
             setGeneratingLink(false);
         }
@@ -237,18 +256,6 @@ export default function MemoryPageClient({
                         accept="video/mp4,video/webm,video/quicktime,video/*,.mov,.mp4,.webm,.m4v"
                         onChange={handleFileChange}
                     />
-                    {/* Share Link button is strictly visible ONLY to the project creator */}
-                    {isCreator && (
-                        <button
-                            className="btn btn-outline flex items-center gap-2"
-                            style={{ backgroundColor: 'white', padding: '11px 18px', fontSize: '0.95rem', borderRadius: '12px', width: 'auto', borderColor: '#D1D5DB' }}
-                            onClick={handleCopyLink}
-                            title="Invite contributors to record messages"
-                        >
-                            {copied ? <CheckCircle2 size={18} style={{ color: '#10B981' }} /> : <Copy size={18} />}
-                            {copied ? 'Invite Link Copied!' : 'Invite Contributors'}
-                        </button>
-                    )}
                 </div>
 
                 {uploadError && (
@@ -272,51 +279,121 @@ export default function MemoryPageClient({
                     </div>
                 )}
 
-                {/* Gifting Callout (Creator Only) */}
-                {isCreator && !event.recipientUserId && (
+                {/* Dedicated Sharing Strip (separated from Record/Upload actions) */}
+                {isCreator && (
                     <div
-                        className="card mt-8 animate-fade-in"
+                        className="mt-6"
                         style={{
-                            marginTop: '2.5rem',
-                            padding: '1.25rem 1.5rem',
-                            backgroundColor: '#FFF8F4',
-                            border: '1px solid #FFE4D6',
-                            borderRadius: '16px',
-                            maxWidth: '600px',
-                            margin: '2.5rem auto 0 auto',
+                            maxWidth: '720px',
+                            margin: '1.75rem auto 0 auto',
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+                            gap: '1rem',
                             textAlign: 'left',
                         }}
                     >
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.4rem', color: '#9A3412' }}>
-                            Gift this Celebration to {event.recipient}
-                        </h3>
-                        <p style={{ color: '#B45309', marginBottom: '1rem', fontSize: '0.9rem', lineHeight: 1.5 }}>
-                            Would you like <strong>{event.recipient}</strong> to save this celebration to their personal account? Send them this private link when you are ready to reveal the gift.
-                        </p>
-                        <div>
+                        {/* Action 1: Invite contributors */}
+                        <div
+                            style={{
+                                backgroundColor: '#FFFFFF',
+                                border: '1px solid #EDE8E1',
+                                borderRadius: '14px',
+                                padding: '1.1rem 1.25rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                gap: '0.85rem',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                            }}
+                        >
+                            <div>
+                                <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
+                                    <UserPlus size={16} style={{ color: '#2563EB' }} />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1F2937' }}>
+                                        Collect video messages
+                                    </span>
+                                </div>
+                                <p style={{ fontSize: '0.825rem', color: '#4B5563', lineHeight: 1.45, margin: 0 }}>
+                                    Ask friends and family to watch messages and add their own video for {event.recipient} (no account needed).
+                                </p>
+                            </div>
                             <button
-                                className="btn btn-primary"
-                                onClick={handleGenerateClaimLink}
-                                disabled={generatingLink}
-                                style={{ padding: '8px 16px', fontSize: '0.875rem', width: 'auto', borderRadius: '8px' }}
+                                className="btn btn-outline flex items-center justify-center gap-2"
+                                style={{
+                                    backgroundColor: '#F9FAFB',
+                                    padding: '9px 14px',
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    borderRadius: '10px',
+                                    width: '100%',
+                                    borderColor: '#D1D5DB',
+                                    color: '#1F2937',
+                                }}
+                                onClick={handleOpenInviteModal}
+                                disabled={loadingInvite}
                             >
-                                {generatingLink ? 'Generating...' : claimLink || event.claimToken ? 'Get Recipient Link' : 'Create Recipient Link'}
+                                <UserPlus size={16} />
+                                {loadingInvite ? 'Loading...' : 'Invite contributors'}
                             </button>
                         </div>
-                        {claimLink && (
-                            <div className="mt-3 p-3 rounded flex justify-between items-center" style={{ backgroundColor: 'white', border: '1px solid #E5E7EB', borderRadius: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                                <code style={{ fontSize: '0.825rem', wordBreak: 'break-all', color: '#374151', flex: 1, minWidth: '180px' }}>{claimLink}</code>
-                                <button
-                                    onClick={async () => {
-                                        await copyToClipboard(claimLink);
-                                        alert('Recipient claim link copied!');
-                                    }}
-                                    style={{ padding: '4px 10px', color: '#9A3412', fontWeight: 600, border: '1px solid #FED7AA', borderRadius: '6px', background: '#FFEDD5', fontSize: '0.8rem', cursor: 'pointer' }}
-                                >
-                                    Copy Link
-                                </button>
-                            </div>
-                        )}
+
+                        {/* Action 2: Share with recipient OR Saved by recipient status */}
+                        <div
+                            style={{
+                                backgroundColor: event.recipientUserId ? '#ECFDF5' : '#FFF8F4',
+                                border: event.recipientUserId ? '1px solid #A7F3D0' : '1px solid #FFE4D6',
+                                borderRadius: '14px',
+                                padding: '1.1rem 1.25rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                gap: '0.85rem',
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                            }}
+                        >
+                            {event.recipientUserId ? (
+                                <div>
+                                    <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
+                                        <CheckCircle2 size={16} style={{ color: '#059669' }} />
+                                        <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#065F46' }}>
+                                            Saved by {savedRecipientDisplayName}
+                                        </span>
+                                    </div>
+                                    <p style={{ fontSize: '0.825rem', color: '#047857', lineHeight: 1.45, margin: 0 }}>
+                                        {savedRecipientDisplayName} has saved this celebration to their account and can revisit their video messages anytime.
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div>
+                                        <div className="flex items-center gap-2" style={{ marginBottom: '0.35rem' }}>
+                                            <Gift size={16} style={{ color: '#C87D55' }} />
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#9A3412' }}>
+                                                Deliver the gift to {event.recipient}
+                                            </span>
+                                        </div>
+                                        <p style={{ fontSize: '0.825rem', color: '#B45309', lineHeight: 1.45, margin: 0 }}>
+                                            Ready to reveal the celebration? Get the link for {event.recipient} to save this celebration to their account.
+                                        </p>
+                                    </div>
+                                    <button
+                                        className="btn btn-primary flex items-center justify-center gap-2"
+                                        style={{
+                                            padding: '9px 14px',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 600,
+                                            borderRadius: '10px',
+                                            width: '100%',
+                                        }}
+                                        onClick={handleOpenRecipientShareModal}
+                                        disabled={generatingLink}
+                                    >
+                                        <Gift size={16} />
+                                        {generatingLink ? 'Loading...' : 'Share with recipient'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -331,7 +408,7 @@ export default function MemoryPageClient({
                     <div
                         className="card text-center"
                         style={{
-                            padding: '3.5rem 1.5rem',
+                            padding: '3.25rem 1.5rem',
                             backgroundColor: '#FFFFFF',
                             borderRadius: '16px',
                             border: '1px solid #EDE8E1',
@@ -341,17 +418,12 @@ export default function MemoryPageClient({
                         <div className="flex justify-center mb-3">
                             <Video size={40} style={{ color: 'var(--accent-color)', opacity: 0.5 }} />
                         </div>
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '1.25rem', color: '#1F2937' }}>
-                            Start the celebration &mdash; record or upload the first message!
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.5rem', color: '#1F2937' }}>
+                            No video messages yet
                         </h3>
-                        <button
-                            className="btn btn-primary flex items-center"
-                            style={{ width: 'auto', margin: '0 auto', fontSize: '0.95rem', padding: '10px 20px', borderRadius: '10px' }}
-                            onClick={() => setShowRecorder(true)}
-                        >
-                            <Video size={18} />
-                            Record Message
-                        </button>
+                        <p style={{ color: '#6B7280', fontSize: '0.925rem', maxWidth: '460px', margin: '0 auto', lineHeight: 1.5 }}>
+                            Use <strong>Record Message</strong> or <strong>Upload Video</strong> above to add the first tribute, or invite contributors to join in.
+                        </p>
                     </div>
                 ) : (
                     <div className="gallery-grid">
@@ -449,6 +521,17 @@ export default function MemoryPageClient({
                     onCoverUpdated={(newUrl) => setCurrentCoverUrl(newUrl)}
                 />
             )}
+
+            {/* Shared Confirmation Modal for Invite Contributors / Share with Recipient */}
+            <ShareCelebrationModal
+                isOpen={shareModal.isOpen}
+                type={shareModal.type}
+                url={shareModal.url}
+                recipientName={event.recipient}
+                messageCount={messages.length}
+                onClose={() => setShareModal((prev) => ({ ...prev, isOpen: false }))}
+                onSwitchToInvite={handleOpenInviteModal}
+            />
         </main>
     );
 }
