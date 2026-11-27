@@ -11,7 +11,6 @@ import {
     MoreVertical,
     Image as ImageIcon,
     Trash2,
-    Copy,
     Check,
     X,
     Gift,
@@ -21,7 +20,7 @@ import {
 import CelebrationCover from '@/components/CelebrationCover';
 import CoverUploadModal from '@/components/CoverUploadModal';
 import ModalPortal from '@/components/ModalPortal';
-import { copyToClipboard } from '@/lib/url';
+import ShareCelebrationModal from '@/components/ShareCelebrationModal';
 
 export type EventPreview = {
     id: string;
@@ -43,16 +42,20 @@ interface DashboardClientProps {
     user: { id: string; name: string | null; email: string };
     createdEvents: EventPreview[];
     savedEvents: EventPreview[];
+    initialTab?: 'created' | 'saved';
+    justClaimed?: boolean;
 }
 
 export default function DashboardClient({
     user,
     createdEvents: initialCreatedEvents,
     savedEvents,
+    initialTab = 'created',
+    justClaimed = false,
 }: DashboardClientProps) {
     const router = useRouter();
     const [createdEvents, setCreatedEvents] = useState<EventPreview[]>(initialCreatedEvents);
-    const [activeTab, setActiveTab] = useState<'created' | 'saved'>('created');
+    const [activeTab, setActiveTab] = useState<'created' | 'saved'>(initialTab);
     const [dismissedGuide, setDismissedGuide] = useState(true); // default true for SSR, loaded in useEffect
 
     // Active Card 3-dot dropdown menu
@@ -66,24 +69,31 @@ export default function DashboardClient({
     // Share / Gift Modal
     const [shareModal, setShareModal] = useState<{
         isOpen: boolean;
-        type: 'contributor' | 'gift';
+        type: 'contributor' | 'recipient';
         event: EventPreview | null;
         url: string;
-        title: string;
-        description: string;
     }>({
         isOpen: false,
         type: 'contributor',
         event: null,
         url: '',
-        title: '',
-        description: ''
     });
 
     const [generatingGiftId, setGeneratingGiftId] = useState<string | null>(null);
     const [loadingInviteId, setLoadingInviteId] = useState<string | null>(null);
-    const [copiedModalLink, setCopiedModalLink] = useState(false);
-    const [toastMessage, setToastMessage] = useState<string | null>(null);
+    const [toastMessage, setToastMessage] = useState<string | null>(
+        justClaimed ? 'Celebration saved to your account!' : null
+    );
+
+    // Clear post-claim toast after 4s and clean query string
+    useEffect(() => {
+        if (!justClaimed) return;
+        router.replace('/dashboard?tab=saved', { scroll: false });
+        const timer = setTimeout(() => {
+            setToastMessage((prev) => (prev === 'Celebration saved to your account!' ? null : prev));
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [justClaimed, router]);
 
     // Load guide dismissal preference from localStorage
     useEffect(() => {
@@ -145,10 +155,7 @@ export default function DashboardClient({
                     type: 'contributor',
                     event,
                     url: data.inviteUrl,
-                    title: `Invite Contributors for ${event.recipient}`,
-                    description: `Share this link with friends, family, and colleagues so they can record or upload video messages.`
                 });
-                setCopiedModalLink(false);
             } else {
                 alert(data.error || 'Only the project creator can retrieve the contributor invite link.');
             }
@@ -175,13 +182,10 @@ export default function DashboardClient({
             if (res.ok && data.claimUrl) {
                 setShareModal({
                     isOpen: true,
-                    type: 'gift',
+                    type: 'recipient',
                     event,
                     url: data.claimUrl,
-                    title: `Gift Celebration to ${event.recipient}`,
-                    description: `Send this private claim link directly to ${event.recipient}. When they open it, they can save this entire collection of video messages into their own account.`
                 });
-                setCopiedModalLink(false);
             } else {
                 alert(data.error || 'Failed to generate gifting link');
             }
@@ -808,11 +812,11 @@ export default function DashboardClient({
                                                     }}
                                                 >
                                                     <Mail size={16} style={{ color: '#6B7280' }} />
-                                                    {loadingInviteId === event.id ? 'Retrieving link...' : 'Invite Contributors'}
+                                                    {loadingInviteId === event.id ? 'Retrieving link...' : 'Invite contributors'}
                                                 </button>
                                             )}
 
-                                            {/* Tertiary Link: Gift Celebration (Creator Only) */}
+                                            {/* Tertiary Link: Share with recipient (Creator Only) */}
                                             {isCreator && !isClaimed && (
                                                 <button
                                                     type="button"
@@ -831,7 +835,7 @@ export default function DashboardClient({
                                                         textUnderlineOffset: '3px',
                                                     }}
                                                 >
-                                                    {generatingGiftId === event.id ? 'Preparing gift link...' : 'Gift This Celebration'}
+                                                    {generatingGiftId === event.id ? 'Preparing recipient link...' : 'Share with recipient'}
                                                 </button>
                                             )}
                                         </div>
@@ -1100,121 +1104,25 @@ export default function DashboardClient({
                 </ModalPortal>
             )}
 
-            {/* MODAL: Share Links (Clear separation between Invite Contributors & Gift to Recipient) */}
-            {shareModal.isOpen && (
-                <ModalPortal>
-                    <div
-                        role="dialog"
-                        aria-modal="true"
-                        aria-labelledby="share-modal-title"
-                        className="modal-overlay"
-                        onClick={e => {
-                            if (e.target === e.currentTarget) setShareModal(prev => ({ ...prev, isOpen: false }));
-                        }}
-                    >
-                        <div
-                            className="modal-content"
-                            style={{
-                                maxWidth: '480px',
-                            }}
-                        >
-                            <button
-                                type="button"
-                                onClick={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
-                                aria-label="Close dialog"
-                                style={{
-                                    position: 'absolute',
-                                    top: '1.25rem',
-                                    right: '1.25rem',
-                                    background: 'none',
-                                    border: 'none',
-                                    color: '#6B7280',
-                                    cursor: 'pointer',
-                                    padding: '4px',
-                                }}
-                            >
-                                <X size={20} />
-                            </button>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.5rem' }}>
-                                {shareModal.type === 'gift' ? (
-                                    <Gift size={22} style={{ color: 'var(--accent-color)' }} />
-                                ) : (
-                                    <Mail size={22} style={{ color: 'var(--accent-color)' }} />
-                                )}
-                                <h2 id="share-modal-title" style={{ fontSize: '1.25rem', fontWeight: 700, color: '#1F2937', margin: 0 }}>
-                                    {shareModal.title}
-                                </h2>
-                            </div>
-
-                            <p style={{ color: '#4B5563', fontSize: '0.925rem', lineHeight: 1.5, marginBottom: '1.25rem' }}>
-                                {shareModal.description}
-                            </p>
-
-                            <div
-                                style={{
-                                    backgroundColor: '#F9FAFB',
-                                    border: '1px solid #E5E7EB',
-                                    borderRadius: '10px',
-                                    padding: '0.75rem 1rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    gap: '10px',
-                                    marginBottom: '1.5rem',
-                                }}
-                            >
-                                <code
-                                    style={{
-                                        fontSize: '0.85rem',
-                                        color: '#374151',
-                                        wordBreak: 'break-all',
-                                        fontFamily: 'monospace',
-                                    }}
-                                >
-                                    {shareModal.url}
-                                </code>
-                                <button
-                                    type="button"
-                                    onClick={async () => {
-                                        await copyToClipboard(shareModal.url);
-                                        setCopiedModalLink(true);
-                                        setTimeout(() => setCopiedModalLink(false), 2000);
-                                    }}
-                                    className="btn btn-primary"
-                                    style={{
-                                        padding: '7px 14px',
-                                        fontSize: '0.825rem',
-                                        borderRadius: '8px',
-                                        flexShrink: 0,
-                                    }}
-                                >
-                                    {copiedModalLink ? (
-                                        <>
-                                            <Check size={14} /> Copied!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy size={14} /> Copy
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setShareModal(prev => ({ ...prev, isOpen: false }))}
-                                    className="btn btn-outline"
-                                    style={{ padding: '8px 18px', fontSize: '0.9rem', borderRadius: '10px' }}
-                                >
-                                    Done
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </ModalPortal>
-            )}
+            {/* MODAL: Share Links (Shared confirmation dialog for Invite contributors & Share with recipient) */}
+            <ShareCelebrationModal
+                isOpen={shareModal.isOpen}
+                type={shareModal.type}
+                url={shareModal.url}
+                recipientName={shareModal.event?.recipient || 'recipient'}
+                messageCount={shareModal.event?._count?.messages ?? 0}
+                onClose={() => setShareModal((prev) => ({ ...prev, isOpen: false }))}
+                onSwitchToInvite={
+                    shareModal.event
+                        ? () => {
+                              const targetEvent = shareModal.event;
+                              if (targetEvent) {
+                                  handleInviteContributors(targetEvent);
+                              }
+                          }
+                        : undefined
+                }
+            />
         </div>
     );
 }

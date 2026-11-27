@@ -27,7 +27,7 @@ export default function ClaimClient({ event, isLoggedIn, token }: ClaimClientPro
                 body: JSON.stringify({ token })
             });
             if (res.ok) {
-                router.push('/dashboard');
+                router.push('/dashboard?tab=saved&claimed=true');
             } else {
                 const data = await res.json();
                 alert(data.error || 'Failed to claim celebration');
