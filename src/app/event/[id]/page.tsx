@@ -39,6 +39,7 @@ export default async function CelebrationPage(props: { params: Promise<{ id: str
     const sanitizedEvent = {
         ...event,
         claimToken: isCreator ? event.claimToken : null,
+        recipientUser: isCreator ? event.recipientUser : null,
     };
 
     return (
